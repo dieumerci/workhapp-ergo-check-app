@@ -34,7 +34,7 @@ bin/dev                 # Rails on :3000 plus the Vite dev server
 Open <http://localhost:3000>. `db:setup` prints the demo accounts and their password; to see them again run
 `bin/rails db:seed`. There are two companies, so you can check tenant isolation by signing in as each.
 
-Signing in needs the **verification code** from the image (it is a real, self-hosted CAPTCHA: type the five digits).
+Signing in needs the **verification code** from the image (it is a real, self-hosted CAPTCHA: type the five digits), or you can choose *Use a text question instead* (an accessible sum, e.g. "What is 36 minus 25?").
 In development, background jobs run in-process, so exports complete without a separate worker.
 
 ### Quality gates (all expected to be clean)

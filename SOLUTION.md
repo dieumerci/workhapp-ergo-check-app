@@ -273,7 +273,14 @@ Throttle (`PAUSE`, `BATCH_SIZE` tunable at run time), run the backfill as a one-
 **Sign-in.** Encrypted, HttpOnly, SameSite=Lax session cookie (Secure in production), reset on sign-in (no fixation) and sign-out, 8-hour idle expiry, one generic failure message (no account enumeration), rate limiting, `no-store` on every authenticated response.
 
 **CAPTCHA.** Self-hosted: no third party, no keys, works offline. The challenge is a **PNG** rendered server-side (pure Ruby, `chunky_png`) with per-glyph rotation, a sine warp, crossing lines and noise. It is deliberately an image, not text in the page, so the
-answer is never in the DOM. Only an HMAC digest and an expiry live in the encrypted session; each challenge is single-use (consumed by any attempt, right or wrong), expires in 5 minutes and is checked *before* the password. **Trade-off:** an image CAPTCHA is not accessible to everyone and is weaker than a modern hosted risk-based service. I judged self-hosted right for an assignment that must run with no external accounts; the module is small enough to swap for Turnstile or hCaptcha behind the same `Captcha.verify?` call.
+answer is never in the DOM. Only an HMAC digest and an expiry are stored, in a **server-side `captcha_challenges` row**; the browser's session holds just the row id. Each challenge is single-use because verifying *deletes* the row (the delete is the gate), expires in 5 minutes and is checked *before* the password.
+An independent review showed that keeping the digest in the cookie-store session made it replayable (one solved challenge passed 10 of 10 replays of the original cookie); moving it server-side fixed that, and the replay tests would catch a regression.
+
+**Accessible alternative.** An image CAPTCHA locks out blind users (WCAG 1.1.1 and 3.3.8), so the sign-in page offers "Can't see the image? Use a text question instead": a short sum ("What is 36 minus 25?") a screen reader can read aloud, using the same server-side single-use mechanism. It is
+easier for a program than the image, so it is limited to 6 requests per hour per address; the real brute-force defences are the per-address (10 per 3 minutes) and per-account (6 per 10 minutes) sign-in limits, which apply either way. **Trade-off:** a determined attacker will pick the text mode, so the CAPTCHA adds
+less than it appears to; it is defence in depth, not the lock. If stronger bot resistance is needed, swap in Turnstile or hCaptcha (both have accessible challenges) behind the same `Captcha.verify?` call.
+
+**Sessions.** The cookie holds a random token; a server-side `admin_sessions` row holds its digest. Signing out deletes the row, so a copied cookie stops working (tested), and the server, not a client-held timestamp, enforces the 8-hour idle expiry. The exports poller sends `X-Background-Poll` so a tab left open in the background no longer keeps a session alive indefinitely.
 
 **Cookies.** Strictly-necessary cookies need no consent; the one optional cookie (remembered dashboard filters) is written **only after opt-in**, is signed, validated against a whitelist on read, and deleted on withdrawal. Consent is explicit: only the literal `"true"` grants it (a test caught Rails' loose boolean casting accepting `"yes please"`). The same consent gates `localStorage` for the release-step ticks.
 
@@ -296,7 +303,7 @@ answer is never in the DOM. Only an HMAC digest and an expiry live in the encryp
 - **Counts are exact, not cached.** Fine at 23 ms for 300k rows. If a tenant reaches tens of millions, add a short-TTL cache or a summary table, measured first.
 - **Read-time score** costs four JSON lookups per displayed row (ten rows). If scores are ever needed for sorting or reporting across rows, a stored column becomes the right answer, and it can be backfilled with the same batching pattern.
 - **Local storage in production is unsafe on ephemeral disks**; S3 is wired and documented but I could not test it without credentials.
-- **The CAPTCHA** is the weakest control in the app against a determined attacker; rate limiting and the generic error carry more of the weight.
+- **The CAPTCHA** is the weakest control in the app against a determined attacker, especially with the accessible text alternative; rate limiting (per address and per account) and the generic error carry the weight.
 - **Not done:** audit log of exports, per-admin permissions beyond "company admin", Loom video, mobile polish beyond a working responsive layout, internationalisation.
 
 ## 10. Build log: the steps and why each was done this way

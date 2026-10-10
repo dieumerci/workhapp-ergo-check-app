@@ -69,12 +69,20 @@ end
 
 class ActionDispatch::IntegrationTest
   KNOWN_CAPTCHA = "48213".freeze
+  KNOWN_QUESTION = [ "What is 23 plus 14? Type the answer as digits.", "37" ].freeze
   DEFAULT_CAPTCHA_GENERATOR = Captcha.code_generator
+  DEFAULT_QUESTION_GENERATOR = Captcha.question_generator
 
   # Tests control the CAPTCHA answer through the generator seam, so the real
   # image rendering and digest verification are still exercised end to end.
-  setup { Captcha.code_generator = -> { KNOWN_CAPTCHA } }
-  teardown { Captcha.code_generator = DEFAULT_CAPTCHA_GENERATOR }
+  setup do
+    Captcha.code_generator = -> { KNOWN_CAPTCHA }
+    Captcha.question_generator = -> { KNOWN_QUESTION }
+  end
+  teardown do
+    Captcha.code_generator = DEFAULT_CAPTCHA_GENERATOR
+    Captcha.question_generator = DEFAULT_QUESTION_GENERATOR
+  end
 
   # Loads a fresh challenge image (which stores its digest in the session),
   # then submits the sign-in form with the given answer.

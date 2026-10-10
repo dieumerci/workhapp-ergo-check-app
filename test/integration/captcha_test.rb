@@ -144,4 +144,72 @@ class CaptchaTest < ActionDispatch::IntegrationTest
 
     assert_equal "[FILTERED]", filter.filter("captcha" => KNOWN_CAPTCHA)["captcha"]
   end
+
+  # ---- the accessible text alternative ---------------------------------------
+
+  def ask_question
+    get captcha_question_path
+    assert_response :success
+    response.parsed_body["question"]
+  end
+
+  test "a text question is served as JSON, readable by a screen reader, with no answer in it" do
+    question = ask_question
+
+    assert_equal ActionDispatch::IntegrationTest::KNOWN_QUESTION.first, question
+    assert_equal "application/json", response.media_type
+    assert_equal "no-store", response.headers["Cache-Control"]
+    assert_not_includes response.body, "37", "the answer must never be sent to the browser"
+    assert_equal 64, CaptchaChallenge.last.digest.length
+  end
+
+  test "signing in with the right answer to the text question works" do
+    ask_question
+    post session_path, params: { email: @admin.email, password: ActiveSupport::TestCase::TEST_PASSWORD, captcha: "37" }
+
+    assert_redirected_to root_path
+  end
+
+  test "a wrong answer to the text question is rejected even with the right password" do
+    ask_question
+    post session_path, params: { email: @admin.email, password: ActiveSupport::TestCase::TEST_PASSWORD, captcha: "38" }
+
+    assert_redirected_to new_session_path
+    get root_path
+    assert_redirected_to new_session_path
+  end
+
+  test "a text question is single use and cannot be replayed from a copied cookie" do
+    ask_question
+    original_cookie = cookies["_ergocheck_session"]
+    post session_path, params: { email: @admin.email, password: "wrong-password-1", captcha: "37" }
+
+    cookies["_ergocheck_session"] = original_cookie
+    post session_path, params: { email: @admin.email, password: ActiveSupport::TestCase::TEST_PASSWORD, captcha: "37" }
+
+    assert_redirected_to new_session_path
+  end
+
+  test "asking for a text question replaces an image challenge, and the reverse" do
+    get captcha_path
+    image_challenge = CaptchaChallenge.last.id
+    ask_question
+
+    assert_not CaptchaChallenge.exists?(image_challenge)
+    assert_equal 1, CaptchaChallenge.count
+  end
+
+  test "the text question needs no sign-in" do
+    get captcha_question_path
+
+    assert_response :success
+  end
+
+  test "the real generator makes sensible sums" do
+    questions = Array.new(200) { DEFAULT_QUESTION_GENERATOR.call }
+
+    assert(questions.all? { |_, answer| answer.match?(/\A\d{1,3}\z/) && answer.to_i >= 0 })
+    assert(questions.all? { |question, _| question.match?(/\AWhat is \d+ (plus|minus) \d+\?/) })
+    assert_operator questions.map(&:first).uniq.size, :>, 20, "questions should vary"
+  end
 end
