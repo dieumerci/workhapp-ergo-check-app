@@ -15,6 +15,9 @@ Rails.application.routes.draw do
     end
   end
 
+  get "release_plan", to: "release_plans#show"
+  get "release_plan/normalize", to: "release_plans#normalize"
+
   resource :session, only: %i[new create destroy]
   resource :captcha, only: :show
   resource :cookie_consent, only: :create
