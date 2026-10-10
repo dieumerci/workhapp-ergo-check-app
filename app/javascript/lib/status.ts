@@ -1,22 +1,8 @@
 import type { StatusValue } from '@/types'
 
-export const STATUS_LABELS: Record<StatusValue, string> = {
-  pending: 'Pending',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  needs_follow_up: 'Needs follow-up',
-  archived: 'Archived',
-}
-
-export const STATUS_ORDER: StatusValue[] = [
-  'pending',
-  'in_progress',
-  'completed',
-  'needs_follow_up',
-  'archived',
-]
-
-// Background + text colour classes per status (design: "each has its own colour and label everywhere").
+// Labels and ordering come from the server (Status::LABELS), so there is one
+// definition. Only the presentation (colour) lives here.
+// Background + text colour classes per status ("each has its own colour and label everywhere").
 export const STATUS_STYLES: Record<StatusValue, { bg: string; fg: string; dot: string }> = {
   pending: { bg: 'bg-warn-tint', fg: 'text-warn', dot: 'bg-warn' },
   in_progress: { bg: 'bg-info-tint', fg: 'text-info', dot: 'bg-info' },

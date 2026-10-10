@@ -100,7 +100,7 @@
         {
           "id": "5.1",
           "title": "Assessments page UI",
-          "done": false
+          "done": true
         },
         {
           "id": "5.2",
@@ -115,7 +115,7 @@
         {
           "id": "5.4",
           "title": "Detail drawer and status update",
-          "done": false
+          "done": true
         },
         {
           "id": "5.5",
