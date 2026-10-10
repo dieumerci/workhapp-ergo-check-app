@@ -37,7 +37,7 @@ class ScoreCalculatorTest < ActiveSupport::TestCase
   end
 
   test "unusable values mean no score" do
-    [ "n/a", "", "abc", true, [], {}, -1, 101, 140, Float::NAN, Float::INFINITY ].each do |bad|
+    [ "n/a", "", "abc", true, [], {}, -1, 101, 140, Float::NAN, Float::INFINITY, "0x1A", "1e2", "1_0", "٣٤", ".5", "7 4", "74,5" ].each do |bad|
       assert_nil ScoreCalculator.score(sections(80, 70, 75, bad)), "expected #{bad.inspect} to be unusable"
     end
   end

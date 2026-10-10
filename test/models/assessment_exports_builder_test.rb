@@ -67,7 +67,7 @@ class AssessmentExportsBuilderTest < ActiveSupport::TestCase
     refs = csv_for(build).map { |row| row["employee_ref"] }
 
     assert_equal 1, refs.uniq.size
-    assert_match(/\Aemp_[0-9a-f]{8}\z/, refs.first)
+    assert_match(/\Aemp_[0-9a-f]{12}\z/, refs.first)
     assert_equal EmployeeRef.for(company_id: @company.id, employee_id: @amara.id), refs.first
   end
 
@@ -156,5 +156,31 @@ class AssessmentExportsBuilderTest < ActiveSupport::TestCase
 
     assert_equal 2, AssessmentExports::Scope.call(@company, **filters).count
     assert_equal 2, build(from_date: filters[:from], to_date: filters[:to]).row_count
+  end
+
+  test "the export never even reads names, e-mail addresses or free text" do
+    seed_rows
+    queries = []
+    capture = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "assessments"') && payload[:name] != "SCHEMA" }
+
+    ActiveSupport::Notifications.subscribed(capture, "sql.active_record") { build }
+
+    selects = queries.select { |sql| sql.start_with?("SELECT") && sql.include?("section_scores") }
+    assert_not_empty selects, "expected the batch SELECT to be captured"
+    selects.each do |sql|
+      assert_no_match(/employees\.name|employee_email|employees\.email|"email"|free_text|\bresponses_json\b(?! ->)/, sql)
+      assert_includes sql, "responses_json -> 'section_scores'"
+    end
+  end
+
+  test "a row pointing at another company's employee exports with no foreign department" do
+    stranger = create_employee(company: @other, name: "Zed Outsider", department: "Secret Dept")
+    create_legacy_assessment(company: @company, employee: stranger, status: "completed")
+
+    body = build.file.download
+
+    assert_not_includes body, "Secret Dept"
+    assert_not_includes body, "Zed"
+    assert_equal [ nil ], CSV.parse(body, headers: true).map { |row| row["department"] }, "an unknown department is an empty cell, not a UI placeholder"
   end
 end

@@ -73,14 +73,15 @@ parts (Solid Queue and Active Storage), both of which Rails 8 ships.
 
 ### 4.2 Redaction by construction, not by filtering
 
-The builder never loads a sensitive column. `AssessmentRow` selects `id`, `employee_id`, `status`, `created_at`, the
+The builder never loads a sensitive column. It uses `AssessmentRow.export_relation`, which selects `id`, `employee_id`, `status`, `created_at`, the
 employee's department, and **only** `responses_json -> 'section_scores'` (four small numbers). The e-mail column, the employee
-name and the free text are never read, so they cannot leak through a bug in a formatter.
+name and the free text are never read, so they cannot leak through a bug in a formatter; a test captures the batch SQL and asserts it never mentions them.
+(An independent review pointed out that the first version reused the dashboard's select, which includes the name for display. It never reached the file, but "redaction by construction" should be literally true, so the export now has its own select.)
 
 | Column | Source | Notes |
 |---|---|---|
 | `assessment_id` | `A-<id>` | |
-| `employee_ref` | `emp_` + 8 hex of HMAC-SHA256(company id, employee id) | one-way, stable, differs per company; lets an admin join rows to people they can already see |
+| `employee_ref` | `emp_` + 12 hex of HMAC-SHA256(company id, employee id) | one-way, stable, differs per company; lets an admin join rows to people they can already see |
 | `department` | employee | guarded against spreadsheet formulas (see below) |
 | `status` | the five standard values | legacy spellings are folded in, never exported raw |
 | `score` | rounded mean of four sections | blank when not scored |
@@ -90,7 +91,7 @@ name and the free text are never read, so they cannot leak through a bug in a fo
 are prefixed with `'` (tested, including embedded commas, quotes and newlines).
 
 **Employee reference length.** The design shows 4 hex characters (`emp_a41f`); that is only 65,536 values, so two employees of a
-large company would collide. I used 8.
+large company would collide. I used 12 (48 bits, negligible collisions even at 100,000 employees).
 
 ### 4.3 The job
 
@@ -284,7 +285,7 @@ answer is never in the DOM. Only an HMAC digest and an expiry live in the encryp
 | Restore from `status_legacy`, then drop the CHECK | Drop the CHECK **first** | the constraint forbids the legacy values, so restoring first would be rejected |
 | CHECK `status IN (…)` | `status IS NOT NULL AND status IN (…)` | `IN` lets NULL through |
 | "Blank-with-responses → needs follow-up" | Blank → `pending`; blanks that carry answers are **reported** for a human | keeps what the page shows before and after the backfill identical; the audit lists them |
-| `emp_a41f` (4 hex) | 8 hex | 4 hex collides in a large company |
+| `emp_a41f` (4 hex) | 12 hex | 4 hex collides in a small company, and even 8 hex collides at ~50,000 employees (found in review) |
 | Mapping table order | canonical order (pending, in progress, completed…) | matches the filter chips; one definition |
 | Safeguards: 4 cards | + a sign-in/cookies card | the two extra features |
 | Score cleared on moving to Pending | hidden, not cleared | destroying answers on a status change is irreversible |

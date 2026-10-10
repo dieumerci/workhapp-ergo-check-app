@@ -39,7 +39,9 @@ module ScoreCalculator
     number =
       case value
       when Integer, Float then value
-      when String then Float(value.strip, exception: false)
+      # Decimal digits only. Ruby's Float() also accepts "0x1A" (26.0) and "1e2" (100.0),
+      # which are not scores.
+      when String then (text = value.strip).match?(/\A\d+(\.\d+)?\z/) ? Float(text) : nil
       end
     return unless number.is_a?(Numeric) && number.finite? && RANGE.cover?(number)
 

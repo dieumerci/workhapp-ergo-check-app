@@ -108,7 +108,7 @@ ApplicationController ── Authentication ── Current.admin ── Current.
 
 **What is in the file:** `assessment_id, employee_ref, department, status, score, created_at`.
 **What is never in it:** names, e-mail addresses, free-text answers, raw responses. Employees appear as a one-way
-HMAC reference such as `emp_a41f9c02`.
+HMAC reference such as `emp_a41f9c02d7e1`.
 
 ### Cookies
 

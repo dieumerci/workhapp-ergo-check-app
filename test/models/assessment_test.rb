@@ -59,4 +59,22 @@ class AssessmentTest < ActiveSupport::TestCase
 
     assert_equal "completed", assessment.reload.status
   end
+
+  test "explicitly blanking an existing status is rejected, not turned into pending" do
+    assessment = create_assessment(company: create_company, status: "archived")
+
+    [ "", "  ", nil ].each do |blank|
+      assert_not assessment.update(status: blank), "#{blank.inspect} must not be accepted"
+      assert_equal "archived", assessment.reload.status
+    end
+  end
+
+  test "a legacy blank status that is left alone still normalises on an unrelated save" do
+    assessment = create_assessment(company: create_company)
+    assessment.update_columns(status: nil)
+
+    assessment.update!(employee_email: "someone@example.com")
+
+    assert_equal "pending", assessment.reload.status
+  end
 end

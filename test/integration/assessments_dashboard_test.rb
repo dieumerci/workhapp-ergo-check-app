@@ -224,7 +224,7 @@ class AssessmentsDashboardTest < ActionDispatch::IntegrationTest
     assert_not_includes body, "lower back pain secret"
     assert_no_match(/responses_json|employee_email|free_text/, body)
     assert_equal "Amara Okafor", rows.first[:employee_name]
-    assert_match(/\Aemp_[0-9a-f]{8}\z/, rows.first[:employee_ref])
+    assert_match(/\Aemp_[0-9a-f]{12}\z/, rows.first[:employee_ref])
   end
 
   test "the page uses two assessment queries however many rows there are" do
@@ -403,5 +403,29 @@ class AssessmentsDashboardTest < ActionDispatch::IntegrationTest
     visit
 
     assert_equal "all", props[:filters][:status]
+  end
+
+  test "an update that forgets the status does not reset the assessment" do
+    assessment = create_assessment(company: @company, status: "archived", responses_json: sections_json(80, 70, 75, 75))
+    sign_in_as(@admin)
+
+    patch assessment_path(assessment)
+
+    assert_equal "archived", assessment.reload.status
+    assert_match(/Status must be one of/, flash[:alert])
+  end
+
+  test "an assessment pointing at another company's employee does not expose that employee" do
+    outsider = create_employee(company: @other_company, name: "Zed Outsider", department: "Secret Dept", email: "zed@example.com")
+    create_legacy_assessment(company: @company, status: "completed", employee: outsider)
+    sign_in_as(@admin)
+
+    visit
+
+    assert_equal 1, props[:pagination][:total], "the row is still counted and listed"
+    assert_equal "Unknown employee", rows.first[:employee_name]
+    assert_equal "—", rows.first[:department]
+    assert_not_includes response.body, "Zed Outsider"
+    assert_not_includes response.body, "Secret Dept"
   end
 end

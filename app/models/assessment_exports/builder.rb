@@ -10,8 +10,9 @@ module AssessmentExports
   #   status         one of the five standard statuses, never a legacy spelling
   #   score          the rounded four-section average, blank when not scored
   #   created_at     date, YYYY-MM-DD
-  # Free-text answers, raw responses, names and e-mail addresses are never
-  # read: AssessmentRow selects only the columns above.
+  # Free-text answers, raw responses, names and e-mail addresses are never read:
+  # AssessmentRow.export_relation selects only what the columns above need, and a
+  # test asserts the SQL never mentions them.
   #
   # Rows are read in batches of 1,000 so memory stays flat however large the
   # company is, written to a temp file, then attached. Progress is saved after
@@ -41,7 +42,7 @@ module AssessmentExports
       Tempfile.create([ "assessments-export", ".csv" ]) do |file|
         file.write(CSV.generate_line(COLUMNS, row_sep: ROW_SEPARATOR))
 
-        AssessmentRow.relation(relation).find_in_batches(batch_size: @batch_size) do |batch|
+        AssessmentRow.export_relation(relation).find_in_batches(batch_size: @batch_size) do |batch|
           raise TimeBudgetExceeded if monotonic_now - started > @max_seconds
 
           batch.each do |record|
@@ -68,6 +69,8 @@ module AssessmentExports
     # A cell that starts with = + - @ (or a tab/CR) is run as a formula by
     # spreadsheet software. Prefix it with an apostrophe so it stays text.
     def safe(value)
+      return if value.nil? # an empty cell, not a quoted empty string
+
       text = value.to_s
       text.match?(FORMULA_PREFIX) ? "'#{text}" : text
     end

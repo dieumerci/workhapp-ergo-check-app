@@ -148,7 +148,7 @@ function FormView({ initial, onJob, onClose }: { initial: ExportFilters; onJob: 
         </div>
         <div className="text-[13px] text-muted">
           <strong className="text-ink">Left out:</strong> names, email addresses, free-text answers and raw responses. Employees appear as a
-          one-way reference (<span className="font-mono text-xs">emp_a41f9c02</span>).
+          one-way reference (<span className="font-mono text-xs">emp_a41f9c02d7e1</span>).
         </div>
       </div>
 

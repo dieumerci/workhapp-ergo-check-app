@@ -1,8 +1,8 @@
 require "test_helper"
 
 class EmployeeRefTest < ActiveSupport::TestCase
-  test "has the emp_ prefix and eight hex characters" do
-    assert_match(/\Aemp_[0-9a-f]{8}\z/, EmployeeRef.for(company_id: 1, employee_id: 2))
+  test "has the emp_ prefix and twelve hex characters" do
+    assert_match(/\Aemp_[0-9a-f]{12}\z/, EmployeeRef.for(company_id: 1, employee_id: 2))
   end
 
   test "is stable for the same employee" do

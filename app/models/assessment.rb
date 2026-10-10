@@ -18,7 +18,15 @@ class Assessment < ApplicationRecord
 
   private
 
+  # A new record with no status starts as pending, and a legacy row that is left
+  # untouched keeps normalising ("" and nil mean "not started"). But explicitly
+  # setting an existing assessment's status to blank is a mistake, not a request to
+  # reset it, so it is left blank for the validation below to reject. (Otherwise a
+  # PATCH that forgot the status param would silently turn an archived assessment
+  # into a pending one.)
   def normalize_status
+    return if persisted? && status_changed? && status.to_s.strip.empty?
+
     self.status = Status.normalize(status) || status
   end
 
