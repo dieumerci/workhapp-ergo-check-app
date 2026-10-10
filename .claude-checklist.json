@@ -1,64 +1,264 @@
 {
-  "activeIndex": 1,
+  "activeIndex": 2,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
   "items": [
-    { "id": "1", "title": "Foundation", "branch": null, "done": false, "subtasks": [
-      { "id": "1.1", "title": "Baseline scaffold committed", "done": true },
-      { "id": "1.2", "title": "PostgreSQL schema and models", "done": false },
-      { "id": "1.3", "title": "Seed data (two tenants, messy legacy statuses)", "done": false }
-    ]},
-    { "id": "2", "title": "Task 3 write path", "branch": null, "done": false, "subtasks": [
-      { "id": "2.1", "title": "Status value object", "done": false },
-      { "id": "2.2", "title": "Assessment normalises and rejects on save", "done": false }
-    ]},
-    { "id": "3", "title": "Identity, tenancy, cookies, CAPTCHA", "branch": null, "done": false, "subtasks": [
-      { "id": "3.1", "title": "Sign-in / sign-out and Current.company", "done": false },
-      { "id": "3.2", "title": "CAPTCHA on sign-in", "done": false },
-      { "id": "3.3", "title": "Cookie consent and preferences cookie", "done": false },
-      { "id": "3.4", "title": "No client-supplied company identifier", "done": false }
-    ]},
-    { "id": "4", "title": "UI shell", "branch": null, "done": false, "subtasks": [
-      { "id": "4.1", "title": "Theme, fonts, app layout", "done": false },
-      { "id": "4.2", "title": "Sign-in page", "done": false }
-    ]},
-    { "id": "5", "title": "Task 2 dashboard", "branch": null, "done": false, "subtasks": [
-      { "id": "5.1", "title": "Assessments page UI", "done": false },
-      { "id": "5.2", "title": "Server-side filtering and pagination", "done": false },
-      { "id": "5.3", "title": "Correct score rules", "done": false },
-      { "id": "5.4", "title": "Detail drawer and status update", "done": false },
-      { "id": "5.5", "title": "Composite index", "done": false },
-      { "id": "5.6", "title": "Benchmark with before/after", "done": false },
-      { "id": "5.7", "title": "Log hygiene", "done": false }
-    ]},
-    { "id": "6", "title": "Task 1 CSV export", "branch": null, "done": false, "subtasks": [
-      { "id": "6.1", "title": "Export model and state machine", "done": false },
-      { "id": "6.2", "title": "Background job", "done": false },
-      { "id": "6.3", "title": "Two filters, redacted columns", "done": false },
-      { "id": "6.4", "title": "Tenant-checked, expiring download", "done": false },
-      { "id": "6.5", "title": "Export modal", "done": false },
-      { "id": "6.6", "title": "Exports page", "done": false }
-    ]},
-    { "id": "7", "title": "Task 3 plan-only backfill", "branch": null, "done": false, "subtasks": [
-      { "id": "7.1", "title": "Release plan page", "done": false },
-      { "id": "7.2", "title": "Guarded backfill tasks", "done": false },
-      { "id": "7.3", "title": "Runbook", "done": false }
-    ]},
-    { "id": "8", "title": "Safeguards page", "branch": null, "done": false, "subtasks": [
-      { "id": "8.1", "title": "Cards and log line", "done": false }
-    ]},
-    { "id": "9", "title": "Quality gates", "branch": null, "done": false, "subtasks": [
-      { "id": "9.1", "title": "Automated tests", "done": false },
-      { "id": "9.2", "title": "Linters and scanners clean", "done": false },
-      { "id": "9.3", "title": "Browser walkthrough", "done": false }
-    ]},
-    { "id": "10", "title": "Deliverables", "branch": null, "done": false, "subtasks": [
-      { "id": "10.1", "title": "README.md", "done": false },
-      { "id": "10.2", "title": "SOLUTION.md", "done": false },
-      { "id": "10.3", "title": "Checklist ticked", "done": false },
-      { "id": "10.4", "title": "Loom demo (owner)", "done": false }
-    ]}
+    {
+      "id": "1",
+      "title": "Foundation",
+      "branch": null,
+      "done": true,
+      "subtasks": [
+        {
+          "id": "1.1",
+          "title": "Baseline scaffold committed",
+          "done": true
+        },
+        {
+          "id": "1.2",
+          "title": "PostgreSQL schema and models (admins arrive with 3.1)",
+          "done": true
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Task 3 write path",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "2.1",
+          "title": "Status value object",
+          "done": false
+        },
+        {
+          "id": "2.2",
+          "title": "Assessment normalises and rejects on save",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": "Identity, tenancy, cookies, CAPTCHA",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "3.1",
+          "title": "Sign-in / sign-out and Current.company",
+          "done": false
+        },
+        {
+          "id": "3.2",
+          "title": "CAPTCHA on sign-in",
+          "done": false
+        },
+        {
+          "id": "3.3",
+          "title": "Cookie consent and preferences cookie",
+          "done": false
+        },
+        {
+          "id": "3.4",
+          "title": "No client-supplied company identifier",
+          "done": false
+        },
+        {
+          "id": "3.5",
+          "title": "Seed data (two tenants, messy legacy statuses)",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": "UI shell",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "4.1",
+          "title": "Theme, fonts, app layout",
+          "done": false
+        },
+        {
+          "id": "4.2",
+          "title": "Sign-in page",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "title": "Task 2 dashboard",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "5.1",
+          "title": "Assessments page UI",
+          "done": false
+        },
+        {
+          "id": "5.2",
+          "title": "Server-side filtering and pagination",
+          "done": false
+        },
+        {
+          "id": "5.3",
+          "title": "Correct score rules",
+          "done": false
+        },
+        {
+          "id": "5.4",
+          "title": "Detail drawer and status update",
+          "done": false
+        },
+        {
+          "id": "5.5",
+          "title": "Composite index",
+          "done": false
+        },
+        {
+          "id": "5.6",
+          "title": "Benchmark with before/after",
+          "done": false
+        },
+        {
+          "id": "5.7",
+          "title": "Log hygiene",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": "Task 1 CSV export",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "6.1",
+          "title": "Export model and state machine",
+          "done": false
+        },
+        {
+          "id": "6.2",
+          "title": "Background job",
+          "done": false
+        },
+        {
+          "id": "6.3",
+          "title": "Two filters, redacted columns",
+          "done": false
+        },
+        {
+          "id": "6.4",
+          "title": "Tenant-checked, expiring download",
+          "done": false
+        },
+        {
+          "id": "6.5",
+          "title": "Export modal",
+          "done": false
+        },
+        {
+          "id": "6.6",
+          "title": "Exports page",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "title": "Task 3 plan-only backfill",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "7.1",
+          "title": "Release plan page",
+          "done": false
+        },
+        {
+          "id": "7.2",
+          "title": "Guarded backfill tasks",
+          "done": false
+        },
+        {
+          "id": "7.3",
+          "title": "Runbook",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "title": "Safeguards page",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "8.1",
+          "title": "Cards and log line",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "title": "Quality gates",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "9.1",
+          "title": "Automated tests",
+          "done": false
+        },
+        {
+          "id": "9.2",
+          "title": "Linters and scanners clean",
+          "done": false
+        },
+        {
+          "id": "9.3",
+          "title": "Browser walkthrough",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "title": "Deliverables",
+      "branch": null,
+      "done": false,
+      "subtasks": [
+        {
+          "id": "10.1",
+          "title": "README.md",
+          "done": false
+        },
+        {
+          "id": "10.2",
+          "title": "SOLUTION.md",
+          "done": false
+        },
+        {
+          "id": "10.3",
+          "title": "Checklist ticked",
+          "done": false
+        },
+        {
+          "id": "10.4",
+          "title": "Loom demo (owner)",
+          "done": false
+        }
+      ]
+    }
   ],
   "outOfScope": []
 }

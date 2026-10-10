@@ -17,8 +17,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 ## 1. Foundation
 
 - [x] 1.1 Baseline Rails 8.1 + Inertia + React + TypeScript + Vite scaffold committed
-- [ ] 1.2 PostgreSQL schema: companies, employees, admins, assessments (+ migrations, models, associations)
-- [ ] 1.3 Seed data: two tenants, 64 Northwind assessments matching the design, deliberately messy legacy statuses
+- [x] 1.2 PostgreSQL schema: companies, employees, assessments (+ migrations, models, associations); admins arrive with sign-in in 3.1
 
 ## 2. Task 3 (write path) — only five statuses go in
 
@@ -31,6 +30,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 - [ ] 3.2 CAPTCHA on sign-in (server-rendered PNG, digest in session, single use, expiring)
 - [ ] 3.3 Cookie consent banner + preferences dialog + "remember my filters" cookie that honours consent
 - [ ] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
+- [ ] 3.5 Seed data: two tenants, 64 Northwind assessments matching the design, deliberately messy legacy statuses
 
 ## 4. UI shell (from the design)
 
