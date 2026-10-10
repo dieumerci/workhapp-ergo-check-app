@@ -40,8 +40,8 @@ Legend: `[x]` done and merged · `[ ]` pending
 ## 5. Task 2 — Dashboard
 
 - [ ] 5.1 Assessments page: status chips with counts, date presets, From/To, clear filters, empty state, skeleton, paging (10/page)
-- [ ] 5.2 Server-side filtering + pagination; status filter works on messy legacy values
-- [ ] 5.3 Score is always the rounded mean of four section scores; "Not scored yet" otherwise
+- [x] 5.2 Server-side filtering + pagination; status filter works on messy legacy values
+- [x] 5.3 Score is always the rounded mean of four section scores; "Not scored yet" otherwise
 - [ ] 5.4 Detail drawer (sections breakdown, status control, toast on save)
 - [ ] 5.5 Composite index `(company_id, status, created_at DESC)` built concurrently
 - [ ] 5.6 Reproducible benchmark (`rake perf:seed`, `rake perf:benchmark`) with before/after numbers

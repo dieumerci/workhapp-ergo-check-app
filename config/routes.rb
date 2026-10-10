@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   end
 
   root "assessments#index"
+  resources :assessments, only: %i[index update]
 
   resource :session, only: %i[new create destroy]
   resource :captcha, only: :show

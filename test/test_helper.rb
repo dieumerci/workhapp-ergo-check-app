@@ -27,6 +27,24 @@ module ActiveSupport
       employee ||= create_employee(company: company)
       Assessment.create!({ company: company, employee: employee }.merge(attrs))
     end
+
+    SECTION_KEYS = %w[workstation_setup posture_movement breaks_recovery discomfort_reported].freeze
+
+    def sections_json(*values)
+      { "section_scores" => SECTION_KEYS.zip(values).to_h }
+    end
+
+    # Inserts a row the way years of legacy data look: no validations, so the
+    # status can be "comp", "", nil, "on hold" and so on.
+    def create_legacy_assessment(company:, status:, employee: nil, created_at: Time.current, responses: nil)
+      employee ||= create_employee(company: company)
+      id = Assessment.insert_all!(
+        [ { company_id: company.id, employee_id: employee.id, employee_email: employee.email, status: status,
+            responses_json: responses, created_at: created_at, updated_at: created_at } ],
+        returning: %w[id]
+      ).first["id"]
+      Assessment.find(id)
+    end
   end
 end
 

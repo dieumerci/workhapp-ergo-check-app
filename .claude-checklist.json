@@ -1,5 +1,5 @@
 {
-  "activeIndex": 5,
+  "activeIndex": 4,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -105,12 +105,12 @@
         {
           "id": "5.2",
           "title": "Server-side filtering and pagination",
-          "done": false
+          "done": true
         },
         {
           "id": "5.3",
           "title": "Correct score rules",
-          "done": false
+          "done": true
         },
         {
           "id": "5.4",
