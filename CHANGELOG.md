@@ -25,6 +25,7 @@ First release: the three tasks of the take-home assignment, the sign-in / CAPTCH
 - **db:** add companies, employees and assessments schema (`486468a`)
 
 ### Fixes
+- **deploy:** stop the storage guard from breaking every production boot (`c71e9e7`)
 - **ui:** meet WCAG contrast, trap focus properly and survive render errors (`a11de55`)
 - **status:** make the backfill rollback leave later edits alone (`9080ef9`)
 - **security:** close unused upload routes, keep signed links out of logs, gate ops pages (`c4dd75a`)
@@ -53,9 +54,12 @@ First release: the three tasks of the take-home assignment, the sign-in / CAPTCH
 - **ui:** hide the scrollbar under the mobile navigation (`657d336`)
 
 ### Documentation
+- record the independent review and finish the project checklist (`487a94a`)
+- **audit:** add v1 production audit checklist (`ef63c58`)
 - **audit:** archive pre-audit documentation to docs/v1_docs (`cb5d2cd`)
 - add .env.example listing every variable the code reads (`a5c6bb3`)
 - add README, SOLUTION and the release runbook (`d981e35`)
 
 ### Chores
+- **release:** prepare v0.1.0 (`c748751`)
 - scaffold rails 8.1 app with inertia, react, typescript and vite (`b4a107d`)

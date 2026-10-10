@@ -317,6 +317,11 @@
         },
         {
           "id": "11.10",
+          "title": "Production boot guarded by a subprocess test",
+          "done": true
+        },
+        {
+          "id": "11.11",
           "title": "Release prep",
           "done": true
         }

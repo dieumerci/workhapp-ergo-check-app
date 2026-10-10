@@ -332,16 +332,16 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 16 | Safeguards page | `617b261` | The "after" log line comes from the real filter |
 | 17 | Production configuration | `6f7dba6`, `0486d21`, `ae56f36` | Verified by booting production mode; found and fixed a routing bug and a log leak |
 | 18 | Docs: README, SOLUTION, runbook, `.env.example` | `d981e35`, `a5c6bb3` | The reasoning, the measurements and the plan written down while fresh |
-| 19 | Independent review, then fixes | `0d3c4cf`, `2c8f4c5`, `847d7cb`, `c4dd75a`, `9080ef9`, `a11de55`, `1325f77` | A reviewer given only the code and the brief found what my own tests had not (§12); every fix has a test that fails without it |
+| 19 | Independent review, then fixes | `0d3c4cf`, `2c8f4c5`, `847d7cb`, `c4dd75a`, `9080ef9`, `a11de55`, `1325f77`, `c71e9e7` | A reviewer given only the code and the brief found what my own tests had not (§12); every fix has a test that fails without it. The last gate, run on a fresh clone of the final commit, found that one of my own fixes broke production boot (`c71e9e7`) |
 | 20 | Production-readiness audit and release prep | this commit | `docs/PRODUCTION_AUDIT_CHECKLIST.md`, `CHANGELOG.md`, version 0.1.0 |
 
 **Defects found by testing, not by reading — all fixed** (the second batch came from the independent review, §12): the design's index not helping the page; a `TimeBudgetExceeded` constant that would have raised `NameError` in the job's `rescue` in production (Zeitwerk); Rails' loose boolean cast
 granting cookie consent for `"yes please"`; the preview endpoint losing its date error to `valid?`; a half-applied migration that could not be reversed; a parallel test race on a cold Vite build; npm and Ruby warnings; a dev-only redirect that also ran in
-production; the signed download link in the logs; and a CSP violation from Inertia's inline progress style (now a nonce). Review round: a CAPTCHA replayable from a copied cookie; exports stuck in "building" after a worker crash; a rollback that would overwrite later edits; and an `INSERT … RETURNING` run through a read path that the query cache silently skipped.
+production; the signed download link in the logs; and a CSP violation from Inertia's inline progress style (now a nonce). Review round: a CAPTCHA replayable from a copied cookie; exports stuck in "building" after a worker crash; a rollback that would overwrite later edits; an `INSERT … RETURNING` run through a read path that the query cache silently skipped; and, on the final fresh-clone gate, a production-only initializer that referenced an autoloaded constant and would have stopped every production boot.
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 228 automated tests, green twice in a row (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 231 automated tests, green twice in a row (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser against the design's screenshots; production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
@@ -365,7 +365,8 @@ before fixing and now has a test that fails without the fix. Full list with evid
 | 8-hex employee references; `"0x1A"` scored as 26 | collisions at ~50,000 employees; a wrong number | 12 hex; decimal digits only |
 | Dialog focus escape, no inert background, no error boundary | accessibility and resilience | portal + `inert`, topmost-only keys, error boundary |
 | No non-visual CAPTCHA alternative | blind admins could not sign in | accessible text question, stricter throttle |
+| *(mine, found by the final gate)* the storage guard raised `NameError` in an initializer | every production boot would have failed; dev and test skip that branch, so 228 green tests missed it | `after_initialize`, plus a test that boots real production mode in a subprocess |
 
 One reviewer finding I **rejected**: that a computable score is hidden for legacy blank-status rows. That is the design's rule ("Pending… say Not scored yet"), and those exact rows are what the backfill audit lists for a human; I documented it instead of changing it.
 
-**What this taught me about my own process:** green tests and a clean linter said nothing about the CAPTCHA being replayable, because my tests replayed *the browser's* behaviour (a cookie jar that updates), not an attacker's. The replay tests now send the *original* cookie.
+**What this taught me about my own process:** green tests and a clean linter said nothing about the CAPTCHA being replayable, because my tests replayed *the browser's* behaviour (a cookie jar that updates), not an attacker's; the replay tests now send the *original* cookie. And a green suite said nothing about production boot, because test and development never run production-only code; the gate has to include a real production-mode boot on the final commit, and now the suite does too.

@@ -68,7 +68,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 9. Quality gates (zero warnings)
 
-- [x] 9.1 Automated tests (228): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening
+- [x] 9.1 Automated tests (231): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening
 - [x] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
 - [x] 9.3 Browser walkthrough of every screen against the design screenshots
 - [x] 9.4 Production configuration verified by booting production mode: single database, Solid Queue worker building an export, SSL headers, CSP with nonce, no signed links in logs
@@ -94,7 +94,8 @@ Findings raised by an independent read-only reviewer and by the audit; full deta
 - [x] 11.7 Accessible text alternative to the image CAPTCHA (AUD-v1-010)
 - [x] 11.8 Hygiene: `.env.example`, CI seeds step, lockfile (AUD-v1-019, 020, 021)
 - [x] 11.9 Production-readiness audit written (`docs/PRODUCTION_AUDIT_CHECKLIST.md`); 8 low-severity items await owner sign-off
-- [x] 11.10 Release prep: `CHANGELOG.md` and version `0.1.0` (tag is the owner's to create)
+- [x] 11.10 Production boot guarded by a subprocess test after the final gate found it broken (AUD-v1-023)
+- [x] 11.11 Release prep: `CHANGELOG.md` and version `0.1.0` (tag is the owner's to create)
 
 ## Out of scope (quarantined)
 

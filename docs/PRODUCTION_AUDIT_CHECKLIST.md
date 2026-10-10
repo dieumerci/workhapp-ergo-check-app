@@ -4,7 +4,7 @@
 |---|---|
 | Audit cycle | v1 (first cycle) |
 | Date | 2026-10-10 |
-| Commit audited | `1325f77` (feat(auth): accessible text question alternative); later commits are documentation and release prep only |
+| Commit audited | `c71e9e7` (fix(deploy): production boot guard). The gate was re-run on this code after the last fix; commits after it are documentation and release prep only |
 | Previous docs archived to | `docs/v1_docs/` (empty: `docs/` held no files; project docs live at the repo root, see Documentation) |
 | **Verdict** | **No open P0–P2 findings.** 0 blocker · 0 high · 0 medium · **8 low (P3) awaiting your sign-off.** Not declared PRODUCTION READY until those are signed off or fixed. |
 
@@ -23,27 +23,27 @@
 
 | Check | Result | Evidence |
 |---|---|---|
-| Checklist | 45/46 items ticked and spot-checked (CHECKLIST.md); the one open item, 10.4 (the Loom video), is yours to record | spot-checks: tenancy, redaction, export, status, release plan, safeguards, cookies, CAPTCHA each exercised in the browser and in tests; no false ticks found |
-| Tests (run 1 / run 2) | 228 passed · 0 failed · 0 skipped / 228 passed · 0 failed · 0 skipped | `bin/rails test` run twice back to back; no `skip`/`xit`/`.only`/commented tests (grep) |
+| Checklist | 46/47 items ticked and spot-checked (CHECKLIST.md); the one open item, 10.4 (the Loom video), is yours to record | spot-checks: tenancy, redaction, export, status, release plan, safeguards, cookies, CAPTCHA each exercised in the browser and in tests; no false ticks found |
+| Tests (run 1 / run 2) | 231 passed · 0 failed · 0 skipped / 231 passed · 0 failed · 0 skipped | `bin/rails test` run twice back to back; no `skip`/`xit`/`.only`/commented tests (grep) |
 | Coverage (critical modules) | not measured (no coverage gem installed) | see *Not verifiable*; the feature → test map below is built from the code |
 | Static checks | clean | `bin/rubocop` (0 offenses), `bin/brakeman` (0 warnings, 1 documented false positive), `bin/bundler-audit` (none), `npm audit` (0), `npm run check` (0 TypeScript errors) |
-| Release build | ok | `RAILS_ENV=production bin/vite build` (no warnings); production mode booted against a scratch DB; fresh `git clone` → install from lockfiles → `db:setup` → 228 tests on a cold cache → build → production boot |
+| Release build | ok | `RAILS_ENV=production bin/vite build` (no warnings); production mode booted against a scratch DB; fresh `git clone` → install from lockfiles → `db:setup` → tests on a cold cache → `bin/ci` → build → production boot; then a full production-mode run on the final code (scratch DB, separate worker process): text-question sign-in, export built by the worker, signed download, copied-cookie replay rejected after sign-out |
 | Whole pipeline | ok | `bin/ci` (10 s) |
 | Monetization gate | N/A | declared free (assumption above) |
 
 ## Delta vs previous cycle
 
-First cycle, so there is nothing to compare. Counts for this cycle: **22 findings raised: 21 fixed, 1 withdrawn (by design).** Separately, 8 low-severity items await your sign-off (they are decisions, not findings).
+First cycle, so there is nothing to compare. Counts for this cycle: **23 findings raised: 22 fixed, 1 withdrawn (by design).** Separately, 8 low-severity items await your sign-off (they are decisions, not findings).
 
 | Fixed | Regressed | New | Carried over |
 |---|---|---|---|
-| 21 | 0 | 21 | 0 |
+| 22 | 0 | 22 | 0 |
 
-Open P0–P2 trend: v1: 10 raised → 0 open.
+Open P0–P2 trend: v1: 11 raised → 0 open.
 
 ## Summary
 
-The application meets all three tasks and the two extras, and the full check pipeline is clean. The first audit pass (mine) found accessibility contrast and a handful of hygiene items; an **independent reviewer, given only the code and the brief,** then found two genuinely serious defects I had missed: a CAPTCHA that could be replayed because its state lived in the client's cookie, and exports that could stick in "building" forever and lock a company out. Every finding was reproduced, fixed with a test that fails without the fix (several were mutation-checked), and merged. What remains is a short list of low-severity items that are product decisions, not defects; they need your sign-off.
+The application meets all three tasks and the two extras, and the full check pipeline is clean. The first audit pass (mine) found accessibility contrast and a handful of hygiene items; an **independent reviewer, given only the code and the brief,** then found two genuinely serious defects I had missed: a CAPTCHA that could be replayed because its state lived in the client's cookie, and exports that could stick in "building" forever and lock a company out. Every finding was reproduced, fixed with a test that fails without the fix (several were mutation-checked), and merged. The last one is mine: re-running the gate on a fresh clone of the final commit showed that my own hardening commit had **broken every production boot** (an initializer referenced an autoloaded constant), which dev and test never exercise; it is fixed and now guarded by a test that boots production mode in a subprocess. What remains is a short list of low-severity items that are product decisions, not defects; they need your sign-off.
 
 ## Needs fixing
 
@@ -62,6 +62,12 @@ The application meets all three tasks and the two extras, and the full check pip
   **Problem:** a killed worker locks a company out of exports and the page polls forever.
   **Fix:** heartbeat (`updated_at` per batch), stalled state shown as failed + Retry at once, `claim!` takes over a dead claim, cap counts only live exports, `ReapStuckExportsJob` every 5 minutes.
   **Verify by:** `exports_test` "an export nobody is working on shows as failed…", "a re-run after a crash takes over…", "a live claim is left alone", "the reaper…", "dead exports do not count towards the cap…". Commit `2c8f4c5`.
+
+- [x] **AUD-v1-023** · Deployment · `config/initializers/active_storage_guard.rb` · confirmed
+  **Evidence:** `RAILS_ENV=production bin/rails runner …` raised `uninitialized constant ActiveStorageGuard` from a fresh clone of the final commit.
+  **Problem:** the guard added in the security-hardening unit referenced a `lib/` constant while initializers were still running, so **no production process could boot**. Dev and test skip that branch, so all 228 tests were green, and the earlier production-mode run predated the guard.
+  **Fix:** run the guard in `after_initialize`; add `test/production_boot_test.rb`, which boots the real production environment in a subprocess (normal boot, refusal on an ephemeral disk without object storage, accepted with S3 configured).
+  **Verify by:** `production_boot_test` (3 tests; all 3 fail with the original initializer, mutation-checked). Commit `c71e9e7`. *Found by the "re-run the gate on the current commit" rule, not by any earlier check.*
 
 ### P2 — Medium
 
@@ -103,7 +109,8 @@ The application meets all three tasks and the two extras, and the full check pip
 | 5 | Backfill rollback | 004 | `fix(status): make the backfill rollback leave later edits alone` |
 | 6 | Accessibility and resilience | 008, 009, 013, 018 | `fix(ui): meet WCAG contrast, trap focus properly and survive render errors` |
 | 7 | CAPTCHA accessibility | 010 | `feat(auth): add an accessible text question as an alternative to the image CAPTCHA` |
-| 8 | Hygiene | 019, 020, 021 | `docs: add .env.example…`, `ci: stop replanting seeds…`, `build(npm): …` |
+| 8 | Production boot broken by the storage guard | 023 | `fix(deploy): stop the storage guard from breaking every production boot` |
+| 9 | Hygiene | 019, 020, 021 | `docs: add .env.example…`, `ci: stop replanting seeds…`, `build(npm): …` |
 
 ## Monetization
 
@@ -114,7 +121,7 @@ The application meets all three tasks and the two extras, and the full check pip
 
 ## Verified done
 
-- [x] **1 Clean setup** — fresh clone → `bundle install` + `npm ci` → `db:setup` → 228 tests (cold Vite cache) → release build → production boot, all in a scratch directory and scratch databases; tool versions pinned (`.ruby-version`, `engines.node`); README steps complete (`bin/setup` includes `npm install`).
+- [x] **1 Clean setup** — fresh clone → `bundle install` + `npm ci` → `db:setup` → 231 tests (cold Vite cache) → release build → production boot, all in a scratch directory and scratch databases; tool versions pinned (`.ruby-version`, `engines.node`); README steps complete (`bin/setup` includes `npm install`).
 - [x] **2 Configuration & secrets** — no secrets in history (`sk_live`, `service_role`, `AKIA`, `BEGIN … PRIVATE KEY`, `password=`: 0 added lines); no key files tracked; `.env.example` lists every variable (`grep ENV[` inventory); debug off in production (`log_level info`); CSP + HSTS + secure/HttpOnly/SameSite cookies verified on a real production-mode response.
 - [x] **3 Architecture & code quality** — no `TODO|FIXME|HACK|XXX`; RuboCop clean with no blanket disables; Brakeman ignore carries a written justification. Dead-dependency check: `csv`, `aws-sdk-s3`, `chunky_png`, `bcrypt`, `minitest-mock` are used; `propshaft` has no helper usages **but is kept deliberately**, because vite_ruby only hooks `assets:precompile` if that task exists, so removing it would silently stop the Dockerfile and Heroku buildpack from building the front end. `kamal`/`thruster` are scaffold deploy tooling referenced by the Dockerfile and `config/deploy.yml`.
 - [x] **4 Every feature end to end** — walked in the browser: sign-in (image, text alternative, wrong code), cookie banner/dialog, dashboard filters, presets, paging, drawer, status change, export dialog → job → download (file inspected), failed state + Retry, Exports page, Release plan tester, Safeguards, mobile width, production mode. States covered: loading skeleton, empty, error, failed, expired, stalled.
@@ -179,4 +186,5 @@ The application meets all three tasks and the two extras, and the full check pip
 | Indexes | `dashboard_indexes_test` (2) | accidental removal |
 | Security hardening | `security_hardening_test` (9) | upload routes, signed link in logs, ephemeral disk, ops pages |
 | Seeds | `seeds_test` (5) | idempotence, design parity |
+| Production boot | `production_boot_test` (3) | initializer errors, ephemeral disk without object storage |
 | Employee reference | `employee_ref_test` (4) | stability, per-company, non-derivable |
