@@ -150,6 +150,44 @@ class StatusBackfillTest < ActiveSupport::TestCase
     end
   end
 
+  test "rollback does not undo an edit made after the backfill" do
+    untouched = legacy("done")
+    edited = legacy("comp")
+    nulled = legacy(nil)
+    backfill.run!
+
+    # a person changes one backfilled row afterwards
+    @connection.execute("UPDATE assessments SET status = 'archived' WHERE id = #{edited.id}")
+
+    restored = backfill.rollback!
+
+    assert_equal 2, restored
+    assert_equal({ "status" => "done", "status_legacy" => nil }, stored(untouched))
+    assert_equal({ "status" => nil, "status_legacy" => nil }, stored(nulled))
+    assert_equal({ "status" => "archived", "status_legacy" => "comp" }, stored(edited), "the edit stays, and the original is kept for review")
+    assert_match(/1 rows were edited after the backfill and were left exactly as they are/, @out.string)
+  end
+
+  test "rollback restores everything when nothing was edited, and says nothing about edits" do
+    legacy("done")
+    legacy("on hold")
+    backfill.run!
+
+    assert_equal 2, backfill.rollback!
+    assert_no_match(/edited after the backfill/, @out.string)
+    assert_equal 0, backfill.edited_since_backfill_count
+  end
+
+  test "a row edited back to the very value the backfill chose is restored, which is indistinguishable and harmless" do
+    row = legacy("comp")
+    backfill.run!
+    @connection.execute("UPDATE assessments SET status = 'completed' WHERE id = #{row.id}")
+
+    backfill.rollback!
+
+    assert_equal({ "status" => "comp", "status_legacy" => nil }, stored(row))
+  end
+
   test "rollback refuses while the CHECK constraint is in place" do
     legacy("done")
     backfill.run!

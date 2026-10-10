@@ -66,7 +66,7 @@ This discards the originals. Only after two weeks with no rollback needed and no
 | Where you are | Do this |
 |---|---|
 | mid-backfill | stop the run; it is resumable and every committed batch is valid |
-| after the backfill, before step 8 | `heroku pg:psql … < db/release_plan/rollback_drop_status_check.sql`, **then** `status:backfill:rollback CONFIRM=yes BACKUP_TAKEN=yes` (online, lossless) |
+| after the backfill, before step 8 | `heroku pg:psql … < db/release_plan/rollback_drop_status_check.sql`, **then** `status:backfill:rollback CONFIRM=yes BACKUP_TAKEN=yes` (online). It restores only rows still holding the backfilled value; any row a person edited since is left alone and counted in the output, with its original in `status_legacy` for you to review |
 | code problem | `heroku releases:rollback v<N>` (the additive schema changes are compatible with older code) |
 | corruption only | `heroku maintenance:on`; `heroku pg:backups:restore <b-id> DATABASE_URL --confirm assessments-prod`; `heroku maintenance:off`. **Writes since the backup are lost.** |
 

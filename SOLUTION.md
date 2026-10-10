@@ -209,7 +209,7 @@ Matching ignores case and surrounding whitespace (`" DONE "` → `completed`). U
 
 `StatusBackfill` guarantees:
 
-- **Reversible.** The original is copied to `status_legacy` first (a sentinel stands in for NULL), and rollback restores it exactly. Tested including NULL, `""`, whitespace and unknown values.
+- **Reversible, without undoing later work.** The original is copied to `status_legacy` first (a sentinel stands in for NULL), and rollback restores it exactly, tested including NULL, `""`, whitespace and unknown values. It restores a row **only if its status is still what the backfill set**: if a person changed it afterwards their edit wins, the row keeps its `status_legacy` for review, and the run reports how many were left (an independent review caught the first version overwriting such edits).
 - **Minimal writes.** Only rows that need changing are updated; valid rows are untouched. `updated_at` is left alone (this is not a user change).
 - **Idempotent and resumable.** `status_legacy IS NULL` marks "not yet processed"; running twice changes nothing; `FROM_ID` resumes.
 - **Does not stall the table.** Batches of 5,000 ids, each its own transaction with `lock_timeout=2s` and `statement_timeout=30s`, retried on lock waits, with a pause between batches.
@@ -259,7 +259,7 @@ On Heroku Postgres Premium, point-in-time rollback to a new database is an alter
 | Rung | Situation | Action | Impact |
 |---|---|---|---|
 | 1 | during the backfill | stop the task (Ctrl-C or `heroku ps:stop`) | none: resumable, every committed batch is valid; the normalizer can stay on |
-| 2 | after the backfill | `rollback_drop_status_check.sql` (drop the constraint **first**), then `status:backfill:rollback CONFIRM=yes` | none: online, lossless |
+| 2 | after the backfill | `rollback_drop_status_check.sql` (drop the constraint **first**), then `status:backfill:rollback CONFIRM=yes` | none: online; edits made since the backfill are kept and reported |
 | 3 | corruption | restore the pre-release backup in a maintenance window | loses writes since the backup |
 
 Code can be rolled back independently with `heroku releases:rollback`; the database is not rolled back by that, which is fine because the schema changes are additive.

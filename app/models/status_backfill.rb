@@ -12,7 +12,9 @@
 #               sentinel stands in for NULL), so a row is never changed twice,
 #               the run can be stopped and resumed, and every batch is valid on
 #               its own. updated_at is left alone: this is not a user change.
-#   * rollback! puts the original values back from status_legacy.
+#   * rollback! puts the original values back from status_legacy, but only for rows
+#               still holding the value the backfill gave them: a status a person
+#               changed afterwards is left alone and reported.
 #
 # The mapping is generated from Status (the same table the save path uses), so
 # the SQL and the Ruby cannot drift apart; the tests check them against each other.
@@ -119,7 +121,17 @@ class StatusBackfill
       from = to + 1
       sleep(@pause) if @pause.positive? && from <= last_id
     end
+
+    left = edited_since_backfill_count
+    say("#{left} rows were edited after the backfill and were left exactly as they are (status_legacy kept for review)") if left.positive?
     restored
+  end
+
+  # Rows still carrying status_legacy after a rollback: a person changed their
+  # status after the backfill ran, so restoring the original would undo that edit.
+  def edited_since_backfill_count
+    ensure_ready!
+    @connection.select_value("SELECT COUNT(*) FROM assessments WHERE status_legacy IS NOT NULL").to_i
   end
 
   # The SQL for one batch. Public so the release plan and the tests can show it.
@@ -134,10 +146,13 @@ class StatusBackfill
     SQL
   end
 
-  def target_sql
+  # The CASE that maps a raw status to its target. +column+ is the SQL expression
+  # holding the raw value ("status" for the backfill; the legacy value when checking
+  # whether a row is still as the backfill left it).
+  def target_sql(column = "status")
     mapping = Status::CANONICAL.index_with(&:itself).merge(Status::ALIASES)
     whens = mapping.map { |raw, target| "WHEN #{quote(raw)} THEN #{quote(target)}" }
-    "CASE lower(btrim(COALESCE(status, ''), E'#{TRIM_CHARS}')) #{whens.join(' ')} ELSE #{quote(Status::UNKNOWN_TARGET)} END"
+    "CASE lower(btrim(COALESCE(#{column}, ''), E'#{TRIM_CHARS}')) #{whens.join(' ')} ELSE #{quote(Status::UNKNOWN_TARGET)} END"
   end
 
   private
@@ -146,12 +161,17 @@ class StatusBackfill
     in_short_transaction { @connection.exec_update(update_sql(from, to), "StatusBackfill") }
   end
 
+  # Restores a row only if its status is still what the backfill set. If a person
+  # has changed it since, their edit wins and the row is left (and reported).
   def restore_batch(from, to)
+    original = "CASE WHEN status_legacy = #{quote(NULL_SENTINEL)} THEN NULL ELSE status_legacy END"
     sql = <<~SQL.squish
       UPDATE assessments
-      SET status = CASE WHEN status_legacy = #{quote(NULL_SENTINEL)} THEN NULL ELSE status_legacy END,
+      SET status = #{original},
           status_legacy = NULL
-      WHERE id BETWEEN #{Integer(from)} AND #{Integer(to)} AND status_legacy IS NOT NULL
+      WHERE id BETWEEN #{Integer(from)} AND #{Integer(to)}
+        AND status_legacy IS NOT NULL
+        AND status = #{target_sql(original)}
     SQL
     in_short_transaction { @connection.exec_update(sql, "StatusBackfill") }
   end

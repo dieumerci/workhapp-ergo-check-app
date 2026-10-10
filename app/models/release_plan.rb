@@ -74,7 +74,7 @@ module ReleasePlan
       { when: "During backfill",
         what: "Stop the task. It is resumable and every committed batch is valid on its own, so nothing breaks. The write-path normalizer can stay on: it only writes valid values." },
       { when: "After backfill",
-        what: "Drop the CHECK constraint (it forbids the old values), then restore the originals in batches from status_legacy with status:backfill:rollback. The app stays online throughout." },
+        what: "Drop the CHECK constraint (it forbids the old values), then restore the originals in batches from status_legacy with status:backfill:rollback. Rows a person edited after the backfill are left as they are and listed. The app stays online throughout." },
       { when: "Last resort",
         what: "Restore the pre-release backup (heroku pg:backups:restore) in a low-traffic window with maintenance mode on. Writes made since the backup are lost, so use it only for data corruption." }
     ]
