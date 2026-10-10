@@ -25,7 +25,13 @@ export const isActive = (job: ExportView) => job.state === 'queued' || job.state
 // a job finishes, wherever the admin happens to be in the app.
 function useExportProgress(exports: ExportView[]) {
   const { say } = useToast()
-  const { start, stop } = usePoll(POLL_INTERVAL_MS, { only: ['exports'] }, { autoStart: false })
+  // The header tells the server these requests are background polls, which must not
+  // count as activity (a tab left open would otherwise keep the session alive for ever).
+  const { start, stop } = usePoll(
+    POLL_INTERVAL_MS,
+    { only: ['exports'], headers: { 'X-Background-Poll': '1' } },
+    { autoStart: false },
+  )
   const previous = useRef(new Map<number, ExportView['state']>())
   const active = exports.some(isActive)
 

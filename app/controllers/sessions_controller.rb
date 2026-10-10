@@ -1,6 +1,11 @@
 class SessionsController < InertiaController
   allow_unauthenticated_access only: %i[new create]
-  rate_limit to: 10, within: 3.minutes, only: :create, with: -> {
+  # Two independent limits: per client address, and per account so a distributed
+  # guesser cannot hammer one admin from many addresses.
+  rate_limit to: 10, within: 3.minutes, only: :create, name: "by-ip", with: -> {
+    redirect_to new_session_path, inertia: { errors: { base: [ "Too many attempts. Please wait a few minutes and try again." ] } }
+  }
+  rate_limit to: 6, within: 10.minutes, only: :create, name: "by-account", by: -> { params[:email].to_s.strip.downcase.first(254) }, with: -> {
     redirect_to new_session_path, inertia: { errors: { base: [ "Too many attempts. Please wait a few minutes and try again." ] } }
   }
 

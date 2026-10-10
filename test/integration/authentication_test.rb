@@ -107,4 +107,86 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
   def shared_auth
     inertia.props[:auth].with_indifferent_access
   end
+
+  # ---- server-side sessions ------------------------------------------------
+
+  test "signing out revokes the session, so a copied cookie stops working" do
+    sign_in_as(@admin)
+    copied_cookie = cookies["_ergocheck_session"]
+    get root_path
+    assert_response :success
+
+    delete session_path
+    cookies["_ergocheck_session"] = copied_cookie
+
+    get root_path
+    assert_redirected_to new_session_path
+    assert_equal 0, AdminSession.count
+  end
+
+  test "only a digest of the session token is stored" do
+    sign_in_as(@admin)
+
+    record = AdminSession.last
+    assert_equal 64, record.token_digest.length
+    assert_equal @admin, record.admin
+  end
+
+  test "idle expiry is decided by the server, not by the cookie" do
+    sign_in_as(@admin)
+    copied_cookie = cookies["_ergocheck_session"]
+
+    travel_to (Authentication::IDLE_TIMEOUT + 1.minute).from_now do
+      cookies["_ergocheck_session"] = copied_cookie
+      get root_path
+      assert_redirected_to new_session_path
+    end
+  end
+
+  test "activity keeps a session alive" do
+    sign_in_as(@admin)
+
+    travel_to 7.hours.from_now do
+      get root_path
+      assert_response :success
+    end
+    travel_to 14.hours.from_now do
+      get root_path
+      assert_response :success, "7 hours after the last activity is still inside the 8-hour window"
+    end
+  end
+
+  test "background polling does not count as activity" do
+    sign_in_as(@admin)
+
+    travel_to 7.hours.from_now do
+      get exports_path, headers: { Authentication::BACKGROUND_HEADER => "1" }
+      assert_response :success
+    end
+    travel_to 9.hours.from_now do
+      get root_path
+      assert_redirected_to new_session_path
+    end
+  end
+
+  test "two browsers are independent sessions" do
+    sign_in_as(@admin)
+    other = open_session
+    other.get captcha_path
+    other.post session_path, params: { email: @admin.email, password: ActiveSupport::TestCase::TEST_PASSWORD, captcha: KNOWN_CAPTCHA }
+
+    assert_equal 2, AdminSession.count
+    delete session_path
+    other.get root_path
+    assert_equal 200, other.response.status, "signing out here must not sign out the other browser"
+  end
+
+  test "idle session rows are purged" do
+    sign_in_as(@admin)
+    AdminSession.update_all(last_seen_at: 3.days.ago)
+
+    PurgeStaleRecordsJob.perform_now
+
+    assert_equal 0, AdminSession.count
+  end
 end

@@ -16,3 +16,6 @@ production:
   purge_expired_exports:
     class: PurgeExpiredExportsJob
     schedule: every day at 3am
+  purge_stale_records:
+    class: PurgeStaleRecordsJob
+    schedule: every hour at minute 27

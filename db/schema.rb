@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_220001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_10_220002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_220001) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_sessions", force: :cascade do |t|
+    t.bigint "admin_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_id"], name: "index_admin_sessions_on_admin_id"
+    t.index ["last_seen_at"], name: "index_admin_sessions_on_last_seen_at"
+    t.index ["token_digest"], name: "index_admin_sessions_on_token_digest", unique: true
   end
 
   create_table "admins", force: :cascade do |t|
@@ -85,6 +96,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_220001) do
     t.index ["company_id", "status", "created_at"], name: "idx_assessments_company_status_created", order: { created_at: :desc }
     t.index ["company_id"], name: "index_assessments_on_company_id"
     t.index ["employee_id"], name: "index_assessments_on_employee_id"
+  end
+
+  create_table "captcha_challenges", force: :cascade do |t|
+    t.string "digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["expires_at"], name: "index_captcha_challenges_on_expires_at"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -267,6 +285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_220001) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_sessions", "admins"
   add_foreign_key "admins", "companies"
   add_foreign_key "assessment_exports", "admins"
   add_foreign_key "assessment_exports", "companies"

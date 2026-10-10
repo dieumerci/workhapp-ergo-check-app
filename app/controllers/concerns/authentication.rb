@@ -1,12 +1,17 @@
-# Cookie-session authentication for company admins.
+# Cookie + server-side session authentication for company admins.
 #
-# The session cookie (encrypted and HttpOnly, see config/initializers/session_store.rb)
-# holds only the admin id and a last-seen timestamp. The session is reset on
-# sign-in (prevents fixation) and on sign-out, and expires after being idle.
+# The encrypted, HttpOnly session cookie holds only a random token. The server
+# keeps its digest in an AdminSession row, which is what makes the session
+# revocable (sign-out deletes the row, so a copied cookie stops working) and lets
+# the server decide when it has been idle too long. The cookie is reset on sign-in
+# (no fixation) and on sign-out.
 module Authentication
   extend ActiveSupport::Concern
 
-  IDLE_TIMEOUT = 8.hours
+  IDLE_TIMEOUT = AdminSession::IDLE_TIMEOUT
+  # Sent by the exports poller. A page left open in a background tab must not keep
+  # a session alive forever, so these requests do not count as activity.
+  BACKGROUND_HEADER = "X-Background-Poll".freeze
 
   included do
     before_action :require_authentication
@@ -34,22 +39,22 @@ module Authentication
   end
 
   def admin_from_session
-    admin_id = session[:admin_id]
-    return if admin_id.blank?
+    token = session[:session_token]
+    return if token.blank?
 
-    if session_idle?
+    record = AdminSession.includes(admin: :company).find_live(token)
+    if record.nil?
       reset_session
       return
     end
 
-    admin = Admin.includes(:company).find_by(id: admin_id)
-    session[:last_seen_at] = Time.current.to_i if admin
-    admin
+    record.touch_if_stale unless background_request?
+    Current.admin_session = record
+    record.admin
   end
 
-  def session_idle?
-    last_seen = session[:last_seen_at]
-    last_seen.nil? || Time.zone.at(last_seen) < IDLE_TIMEOUT.ago
+  def background_request?
+    request.headers[BACKGROUND_HEADER].present?
   end
 
   def request_authentication
@@ -65,12 +70,12 @@ module Authentication
     return_to = session[:return_to]
     reset_session
     session[:return_to] = return_to if return_to
-    session[:admin_id] = admin.id
-    session[:last_seen_at] = Time.current.to_i
+    session[:session_token] = AdminSession.start(admin)
     Current.admin = admin
   end
 
   def terminate_session
+    AdminSession.revoke(session[:session_token])
     reset_session
     Current.reset
   end

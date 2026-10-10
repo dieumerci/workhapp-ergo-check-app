@@ -15,12 +15,69 @@ class CaptchaTest < ActionDispatch::IntegrationTest
     assert_equal [ Captcha::Renderer::WIDTH, Captcha::Renderer::HEIGHT ], [ image.width, image.height ]
   end
 
-  test "the session holds a digest, never the answer" do
+  test "the browser holds only a challenge id; the server holds a digest, never the answer" do
     get captcha_path
 
-    stored = request.session[:captcha]
-    assert_equal 64, stored["digest"].length
-    assert_not_includes stored.to_s, KNOWN_CAPTCHA
+    challenge = CaptchaChallenge.last
+    assert_equal 64, challenge.digest.length
+    assert_not_includes challenge.digest, KNOWN_CAPTCHA
+    assert_equal challenge.id, request.session[:captcha_id]
+    assert_nil request.session[:captcha], "the digest must not be stored in the cookie"
+  end
+
+  test "a captured cookie cannot replay a solved challenge" do
+    get captcha_path
+    original_cookie = cookies["_ergocheck_session"]
+
+    # the legitimate attempt uses the challenge up (wrong password, so no sign-in)
+    post session_path, params: { email: @admin.email, password: "wrong-password-1", captcha: KNOWN_CAPTCHA }
+    assert_equal 0, CaptchaChallenge.count, "verifying must delete the challenge"
+
+    # an attacker replays the ORIGINAL cookie with the right code and the right password
+    cookies["_ergocheck_session"] = original_cookie
+    post session_path, params: { email: @admin.email, password: ActiveSupport::TestCase::TEST_PASSWORD, captcha: KNOWN_CAPTCHA }
+
+    assert_redirected_to new_session_path
+    get root_path
+    assert_redirected_to new_session_path
+  end
+
+  test "ten replays of one cookie still pass the CAPTCHA at most once" do
+    get captcha_path
+    original_cookie = cookies["_ergocheck_session"]
+    results = Array.new(10) do
+      cookies["_ergocheck_session"] = original_cookie
+      post session_path, params: { email: "nobody@example.com", password: "whatever-12345", captcha: KNOWN_CAPTCHA }
+      follow_redirect!
+      inertia.props[:errors].with_indifferent_access.key?(:captcha)
+    end
+
+    assert_equal 1, results.count(false), "exactly one attempt may get past the CAPTCHA"
+    assert_equal 9, results.count(true)
+  end
+
+  test "issuing a new challenge discards the previous one" do
+    get captcha_path
+    first = CaptchaChallenge.last.id
+    get captcha_path
+
+    assert_not CaptchaChallenge.exists?(first)
+    assert_equal 1, CaptchaChallenge.count
+  end
+
+  test "expired challenges are purged" do
+    get captcha_path
+    CaptchaChallenge.update_all(expires_at: 2.hours.ago)
+
+    CaptchaChallenge.purge_expired
+
+    assert_equal 0, CaptchaChallenge.count
+  end
+
+  test "a forged challenge id is rejected without raising" do
+    [ "1; DROP TABLE captcha_challenges", "abc", "-1", "9" * 40, "" ].each do |bad|
+      assert_nil CaptchaChallenge.consume(bad)
+    end
   end
 
   test "the image differs between codes" do

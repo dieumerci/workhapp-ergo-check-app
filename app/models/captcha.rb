@@ -1,12 +1,15 @@
 # Self-hosted CAPTCHA for the sign-in form.
 #
 # A random code is rendered into a PNG (Captcha::Renderer), so the answer is
-# never present in the page's DOM or markup. Only an HMAC digest of the code
-# is kept in the (encrypted) session, together with an expiry. Each challenge
-# is single use: any verification attempt, right or wrong, consumes it.
+# never present in the page's DOM or markup. Only an HMAC digest of the code is
+# stored, in a server-side CaptchaChallenge row; the browser's session holds just
+# that row's id. Each challenge is single use because verifying DELETES the row:
+# replaying an old cookie finds nothing to verify against. (A digest kept inside
+# a cookie-store session could not be single-use, since the client holds the only
+# copy and can resend it.)
 module Captcha
   CODE_LENGTH = 5
-  TTL = 5.minutes
+  TTL = CaptchaChallenge::TTL
 
   mattr_accessor :code_generator, default: -> {
     Array.new(CODE_LENGTH) { SecureRandom.random_number(10) }.join
@@ -14,23 +17,25 @@ module Captcha
 
   module_function
 
-  # Creates a new challenge, remembers its digest in +session+ and returns the code.
+  # Creates a new challenge, remembers its id in +session+ and returns the code.
+  # Any earlier challenge for this session is discarded.
   def issue(session, now: Time.current)
+    CaptchaChallenge.discard(session.delete(:captcha_id))
     code = code_generator.call
-    session[:captcha] = { "digest" => digest(code), "expires_at" => (now + TTL).to_i }
+    session[:captcha_id] = CaptchaChallenge.issue(digest(code), now: now).id
     code
   end
 
-  # True only if +answer+ matches the challenge currently stored in +session+.
+  # True only if +answer+ matches the challenge currently held by +session+.
+  # The challenge is consumed whether or not the answer is right.
   def verify?(session, answer, now: Time.current)
-    stored = session.delete(:captcha)
-    return false unless stored.is_a?(Hash)
-    return false if stored["expires_at"].to_i < now.to_i
+    stored_digest = CaptchaChallenge.consume(session.delete(:captcha_id), now: now)
+    return false unless stored_digest
 
     candidate = answer.to_s.gsub(/\s+/, "")
     return false unless candidate.match?(/\A\d{#{CODE_LENGTH}}\z/)
 
-    ActiveSupport::SecurityUtils.secure_compare(stored["digest"].to_s, digest(candidate))
+    ActiveSupport::SecurityUtils.secure_compare(stored_digest, digest(candidate))
   end
 
   def digest(code)
