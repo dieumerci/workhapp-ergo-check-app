@@ -16,6 +16,10 @@ module Workhappy
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    # The only Active Storage use is the generated CSV exports; there are no
+    # image variants, so no image library (libvips) is needed or loaded.
+    config.active_storage.variant_processor = :disabled
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files
