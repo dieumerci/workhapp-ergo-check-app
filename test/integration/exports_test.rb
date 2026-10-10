@@ -256,6 +256,20 @@ class ExportsTest < ActionDispatch::IntegrationTest
     assert_match(/expired/, flash[:alert])
   end
 
+  test "the signed download link never reaches the logs" do
+    export = AssessmentExport.create!(company: @company, admin: @admin)
+    export.file.attach(io: StringIO.new("a,b\n"), filename: "x.csv", content_type: "text/csv")
+    export.mark_ready!(row_count: 1)
+    sign_in_as(@admin)
+
+    log = captured_log { get download_export_path(export) }
+    signed_path = URI(response.location).path
+
+    assert_not_includes log, signed_path
+    assert_no_match(%r{/rails/active_storage/disk/}, log)
+    assert_match(/Redirected to \[FILTERED\]/, log)
+  end
+
   test "the signed download link is short lived" do
     export = AssessmentExport.create!(company: @company, admin: @admin)
     export.file.attach(io: StringIO.new("a,b\n"), filename: "x.csv", content_type: "text/csv")

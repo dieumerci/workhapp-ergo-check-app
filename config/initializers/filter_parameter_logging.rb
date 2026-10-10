@@ -14,3 +14,9 @@ Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
   :captcha, :employee_email, :employee_name, :responses, :answers, :free_text
 ]
+
+# Rails logs every redirect target ("Redirected to ..."). The export download
+# redirects to a one-minute signed storage link, which is effectively a password
+# for that file, so it must not reach the logs. These patterns cover the local
+# disk service and S3's presigned URLs.
+Rails.application.config.filter_redirect += [ %r{/rails/active_storage/}, /X-Amz-Signature/i ]
