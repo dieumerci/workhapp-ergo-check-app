@@ -10,7 +10,9 @@ CI.run do
   step "Types: TypeScript", "npm run check"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
   step "Tests: Rails", "bin/rails test"
-  step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
+  # Seeds are exercised inside a rolled-back transaction by test/seeds_test.rb.
+  # Replanting them into the test database here would leave demo companies behind
+  # and make the next test run fail on their unique names.
 
   # Optional: Run system tests
   # step "Tests: System", "bin/rails test:system"
