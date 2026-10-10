@@ -1,0 +1,61 @@
+# Dashboard benchmark - raw output of `SIZES=5000,25000,100000,300000 bin/rails perf:report`
+# Run on: Darwin 25.6.0 arm64 arm Apple M5 Pro | psql (PostgreSQL) 18.6 (Homebrew) | ruby 3.3.12
+# 2026-10-10. The benchmarked tenant has N rows; the table also holds 3x N rows for 20 other tenants.
+# time = median wall-clock of 5 runs (legacy page: single run); objects = Ruby objects allocated.
+
+scenario (5000 rows)                        time ms   queries      objects
+--------------------------------------------------------------------------
+before: default view                           1442      5001      2746995
+before: status=completed                        202       666       364987
+after, no new index: default view                 5         2         2387
+after, no new index: status=completed             5         2         2522
+after, no new index: last 90 days                 4         2         2635
+after, ordering index only: default view          4         2         2387
+after, ordering index only: status=completed          2         2         2521
+after, ordering index only: last 90 days          1         2         2635
+after, both indexes (shipped): default view          3         2         2387
+after, both indexes (shipped): status=completed          2         2         2521
+after, both indexes (shipped): last 90 days          1         2         2635
+
+scenario (25000 rows)                       time ms   queries      objects
+--------------------------------------------------------------------------
+before: default view                           7153     25001     13697347
+before: status=completed                        956      3392      1858824
+after, no new index: default view                15         2         2385
+after, no new index: status=completed            15         2         2521
+after, no new index: last 90 days                10         2         2633
+after, ordering index only: default view          6         2         2385
+after, ordering index only: status=completed          8         2         2521
+after, ordering index only: last 90 days          5         2         2633
+after, both indexes (shipped): default view          4         2         2385
+after, both indexes (shipped): status=completed          4         2         2521
+after, both indexes (shipped): last 90 days          2         2         2633
+
+scenario (100000 rows)                      time ms   queries      objects
+--------------------------------------------------------------------------
+before: default view                          29825    100001     54787444
+before: status=completed                       3714     13256      7264296
+after, no new index: default view                38         2         2407
+after, no new index: status=completed            39         2         2521
+after, no new index: last 90 days                30         2         2655
+after, ordering index only: default view         27         2         2407
+after, ordering index only: status=completed         31         2         2521
+after, ordering index only: last 90 days         23         2         2655
+after, both indexes (shipped): default view          8         2         2407
+after, both indexes (shipped): status=completed          8         2         2521
+after, both indexes (shipped): last 90 days          2         2         2655
+
+scenario (300000 rows)                      time ms   queries      objects
+--------------------------------------------------------------------------
+before: default view                          94533    300001    164360719
+before: status=completed                      11499     39882     21885481
+after, no new index: default view                93         2         2411
+after, no new index: status=completed            85         2         2525
+after, no new index: last 90 days                77         2         2659
+after, ordering index only: default view         49         2         2411
+after, ordering index only: status=completed         44         2         2525
+after, ordering index only: last 90 days         38         2         2659
+after, both indexes (shipped): default view         23         2         2411
+after, both indexes (shipped): status=completed         23         2         2525
+after, both indexes (shipped): last 90 days          6         2         2659
+

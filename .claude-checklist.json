@@ -120,12 +120,12 @@
         {
           "id": "5.5",
           "title": "Composite index",
-          "done": false
+          "done": true
         },
         {
           "id": "5.6",
           "title": "Benchmark with before/after",
-          "done": false
+          "done": true
         },
         {
           "id": "5.7",
