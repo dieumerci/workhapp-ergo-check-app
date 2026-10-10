@@ -6,3 +6,17 @@ export function formatDate(iso: string): string {
     year: 'numeric',
   })
 }
+
+// "Just now", "12 min ago", then the date once it is more than an hour old.
+export function formatRequested(isoTimestamp: string, now = Date.now()): string {
+  const minutes = Math.floor((now - new Date(isoTimestamp).getTime()) / 60_000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} min ago`
+  return formatDate(isoTimestamp.slice(0, 10))
+}
+
+// "Sep 1, 2026 – Sep 30, 2026", "Start – Today" or "All dates".
+export function formatRange(from: string, to: string): string {
+  if (!from && !to) return 'All dates'
+  return `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Today'}`
+}

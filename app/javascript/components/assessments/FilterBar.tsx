@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cx } from '@/lib/cx'
-import type { Counts, Filters, StatusOption } from '@/types/assessments'
+import type { StatusOption } from '@/types'
+import type { Counts, Filters } from '@/types/assessments'
 
 const PRESETS: Array<{ value: Filters['preset']; label: string }> = [
   { value: '7', label: '7 days' },

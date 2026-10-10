@@ -1,5 +1,5 @@
 {
-  "activeIndex": 5,
+  "activeIndex": 6,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -138,7 +138,7 @@
       "id": "6",
       "title": "Task 1 CSV export",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "6.1",
@@ -163,12 +163,12 @@
         {
           "id": "6.5",
           "title": "Export modal",
-          "done": false
+          "done": true
         },
         {
           "id": "6.6",
           "title": "Exports page",
-          "done": false
+          "done": true
         }
       ]
     },

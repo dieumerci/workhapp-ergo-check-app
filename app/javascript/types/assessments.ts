@@ -1,7 +1,5 @@
 import type { StatusValue } from '@/types'
 
-export type StatusOption = { value: StatusValue; label: string }
-
 export type Filters = {
   status: StatusValue | 'all'
   preset: '7' | '30' | '90' | 'all' | 'custom'
@@ -34,7 +32,6 @@ export type Pagination = { page: number; pages: number; total: number; per_page:
 
 export type AssessmentsIndexProps = {
   filters: Filters
-  status_options: StatusOption[]
   assessments: AssessmentRow[]
   counts: Counts
   pagination: Pagination

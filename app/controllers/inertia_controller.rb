@@ -11,6 +11,10 @@ class InertiaController < ApplicationController
   # reload just this prop; it is also what drives the "Exports" menu badge.
   inertia_share exports: -> { exports_payload }
 
+  # Single server-side definitions the UI renders from (filters, drawer, export dialog).
+  inertia_share status_options: -> { Status::CANONICAL.map { |value| { value: value, label: Status.label(value) } } }
+  inertia_share export_columns: -> { AssessmentExports::Builder::COLUMNS }
+
   inertia_share auth: -> {
     {
       admin: Current.admin && { name: Current.admin.name, initials: Current.admin.initials },

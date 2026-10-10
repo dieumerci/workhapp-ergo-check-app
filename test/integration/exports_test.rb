@@ -312,6 +312,16 @@ class ExportsTest < ActionDispatch::IntegrationTest
     assert_nil props[:exports].first[:download_path]
   end
 
+  test "the page is told the export columns and status options from one server-side definition" do
+    sign_in_as(@admin)
+
+    get exports_path
+
+    assert_equal AssessmentExports::Builder::COLUMNS, props[:export_columns]
+    assert_equal Status::CANONICAL, props[:status_options].map { |option| option[:value] }
+    assert_equal "Needs follow-up", props[:status_options].find { |option| option[:value] == "needs_follow_up" }[:label]
+  end
+
   test "a ready export exposes a download path, an expired one does not" do
     ready = AssessmentExport.create!(company: @company, admin: @admin)
     ready.file.attach(io: StringIO.new("a,b\n"), filename: "x.csv", content_type: "text/csv")

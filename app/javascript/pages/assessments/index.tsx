@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
-import { Head, router } from '@inertiajs/react'
+import { Head, router, usePage } from '@inertiajs/react'
 import AssessmentTable from '@/components/assessments/AssessmentTable'
 import DetailDrawer from '@/components/assessments/DetailDrawer'
 import FilterBar from '@/components/assessments/FilterBar'
 import Pager from '@/components/assessments/Pager'
+import { DownloadIcon } from '@/components/Icons'
+import { useExports } from '@/components/exports/ExportProvider'
 import type { AssessmentRow, AssessmentsIndexProps, Filters } from '@/types/assessments'
 
 type Query = Record<string, string | number>
@@ -23,7 +25,9 @@ function buildQuery(filters: Filters, page = 1): Query {
 // Wait a beat before showing the skeleton so fast responses don't flash it.
 const SKELETON_DELAY_MS = 150
 
-export default function Index({ filters, status_options, assessments, counts, pagination, selected }: AssessmentsIndexProps) {
+export default function Index({ filters, assessments, counts, pagination, selected }: AssessmentsIndexProps) {
+  const { status_options } = usePage().props
+  const { openExport } = useExports()
   const [loading, setLoading] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -63,9 +67,19 @@ export default function Index({ filters, status_options, assessments, counts, pa
     <>
       <Head title="Assessments" />
       <section className="flex flex-col gap-[18px]">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-tight">Assessments</h1>
-          <div className="mt-0.5 text-muted">Ergonomic and health assessments for your employees.</div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold tracking-tight">Assessments</h1>
+            <div className="mt-0.5 text-muted">Ergonomic and health assessments for your employees.</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => openExport({ from: filters.from, to: filters.to, status: filters.status })}
+            className="inline-flex items-center gap-2 rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
+          >
+            <DownloadIcon size={15} />
+            Export CSV
+          </button>
         </div>
 
         <div className="overflow-hidden rounded-[14px] border border-line bg-white">

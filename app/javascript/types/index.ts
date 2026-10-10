@@ -1,3 +1,7 @@
+import type { ExportView } from '@/types/exports'
+
+export type StatusOption = { value: StatusValue; label: string }
+
 export type FlashData = {
   notice?: string
   alert?: string
@@ -12,6 +16,9 @@ export type SharedProps = {
     company: { name: string } | null
   }
   cookie_consent: { decided: boolean; preferences: boolean }
+  exports: ExportView[]
+  export_columns: string[]
+  status_options: StatusOption[]
 }
 
 export type StatusValue =

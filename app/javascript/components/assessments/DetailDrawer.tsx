@@ -5,8 +5,8 @@ import { CloseIcon, LockIcon } from '@/components/Icons'
 import { formatDate } from '@/lib/format'
 import { scoreTone } from '@/lib/status'
 import { cx } from '@/lib/cx'
-import type { AssessmentDetail, StatusOption } from '@/types/assessments'
-import type { StatusValue } from '@/types'
+import type { AssessmentDetail } from '@/types/assessments'
+import type { StatusOption, StatusValue } from '@/types'
 
 type Props = { detail: AssessmentDetail | null; statusOptions: StatusOption[]; onClose: () => void }
 

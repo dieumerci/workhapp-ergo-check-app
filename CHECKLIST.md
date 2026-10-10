@@ -53,8 +53,8 @@ Legend: `[x]` done and merged · `[ ]` pending
 - [x] 6.2 Background job builds the CSV in batches, updates progress, fails safely with a generic reason
 - [x] 6.3 Exactly two filters (date range, status); six redacted columns; one-way `employee_ref`; CSV-injection guard
 - [x] 6.4 Download is tenant-checked and expires after 24 hours
-- [ ] 6.5 Export modal: locked company, match count, validation, in-progress / ready states
-- [ ] 6.6 Exports page: history, progress bars, download, retry, nav badge, polling
+- [x] 6.5 Export modal: locked company, match count, validation, in-progress / ready states
+- [x] 6.6 Exports page: history, progress bars, download, retry, nav badge, polling
 
 ## 7. Task 3 — Plan-only backfill and release plan
 

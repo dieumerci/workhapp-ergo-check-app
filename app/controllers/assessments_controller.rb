@@ -12,7 +12,6 @@ class AssessmentsController < InertiaController
 
     render inertia: {
       filters: filters.to_h,
-      status_options: Status::CANONICAL.map { |value| { value: value, label: Status.label(value) } },
       assessments: -> { result.call.rows.map(&:to_list) },
       counts: -> { result.call.counts },
       pagination: -> {
