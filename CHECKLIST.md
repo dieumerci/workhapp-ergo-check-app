@@ -28,7 +28,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 - [x] 3.1 Company-admin sign-in / sign-out, `Current.company` derived from the session, rate-limited
 - [x] 3.2 CAPTCHA on sign-in (server-rendered PNG, digest in session, single use, expiring)
-- [ ] 3.3 Cookie consent banner + preferences dialog + "remember my filters" cookie that honours consent
+- [x] 3.3 Cookie consent (server side): signed consent cookie, endpoint, shared prop, opt-in "remember my filters" cookie store. Banner UI lands in 4.1
 - [ ] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
 - [ ] 3.5 Seed data: two tenants, 64 Northwind assessments matching the design, deliberately messy legacy statuses
 
