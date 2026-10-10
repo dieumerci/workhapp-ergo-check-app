@@ -1,5 +1,5 @@
 {
-  "activeIndex": 3,
+  "activeIndex": 5,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -77,17 +77,17 @@
       "id": "4",
       "title": "UI shell",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "4.1",
           "title": "Theme, fonts, app layout",
-          "done": false
+          "done": true
         },
         {
           "id": "4.2",
           "title": "Sign-in page",
-          "done": false
+          "done": true
         }
       ]
     },

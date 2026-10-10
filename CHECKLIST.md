@@ -28,14 +28,14 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 - [x] 3.1 Company-admin sign-in / sign-out, `Current.company` derived from the session, rate-limited
 - [x] 3.2 CAPTCHA on sign-in (server-rendered PNG, digest in session, single use, expiring)
-- [x] 3.3 Cookie consent (server side): signed consent cookie, endpoint, shared prop, opt-in "remember my filters" cookie store. Banner UI lands in 4.1
+- [x] 3.3 Cookie consent: signed consent cookie, banner + settings dialog, opt-in "remember my filters" cookie store (wired to the dashboard in 5.1)
 - [ ] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
 - [x] 3.5 Seed data: two tenants, 64 Northwind assessments matching the design, deliberately messy legacy statuses
 
 ## 4. UI shell (from the design)
 
-- [ ] 4.1 Tailwind theme tokens, self-hosted Instrument Sans / IBM Plex Mono, app layout (sidebar, company badge, toasts)
-- [ ] 4.2 Sign-in page in the same visual language
+- [x] 4.1 Tailwind theme tokens, self-hosted Instrument Sans / IBM Plex Mono, app layout (sidebar, company badge, toasts)
+- [x] 4.2 Sign-in page in the same visual language
 
 ## 5. Task 2 — Dashboard
 
