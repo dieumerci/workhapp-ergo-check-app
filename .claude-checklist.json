@@ -228,6 +228,11 @@
           "id": "9.3",
           "title": "Browser walkthrough",
           "done": false
+        },
+        {
+          "id": "9.4",
+          "title": "Production configuration verified in production mode",
+          "done": true
         }
       ]
     },

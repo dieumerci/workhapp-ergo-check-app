@@ -14,6 +14,9 @@ void createInertiaApp({
 
   progress: { color: '#0E6B5C' },
 
+  // Rails' per-request CSP nonce (production), so Inertia's one inline <style> is allowed without 'unsafe-inline'.
+  nonce: document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content,
+
   defaults: {
     form: {
       forceIndicesArrayFormatInFormData: false,

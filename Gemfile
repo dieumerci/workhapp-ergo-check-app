@@ -14,10 +14,9 @@ gem "bcrypt", "~> 3.1.7"
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
-# Use the database-backed adapters for Rails.cache, Active Job, and Action Cable
+# Use the database-backed adapters for Rails.cache and Active Job
 gem "solid_cache"
 gem "solid_queue"
-gem "solid_cable"
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
@@ -66,3 +65,6 @@ gem "chunky_png", "~> 1.4"
 
 # CSV left the default gems in Ruby 3.4; declared so Ruby 3.3 does not warn and the upgrade is painless
 gem "csv"
+
+# Object storage for generated exports on platforms with an ephemeral disk; only loaded when ACTIVE_STORAGE_SERVICE=amazon
+gem "aws-sdk-s3", require: false

@@ -25,3 +25,14 @@ local:
 #   service: Mirror
 #   primary: local
 #   mirrors: [ amazon, google, microsoft ]
+
+# Production on platforms with an ephemeral disk (Heroku and similar).
+# Credentials come from the environment, never from the repository.
+amazon:
+  service: S3
+  access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
+  region: <%= ENV.fetch("AWS_REGION", "eu-west-1") %>
+  bucket: <%= ENV["AWS_S3_BUCKET"] %>
+  # Exports are private: files are only reachable through short-lived signed links.
+  public: false

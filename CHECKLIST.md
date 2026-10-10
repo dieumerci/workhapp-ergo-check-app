@@ -71,6 +71,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 - [ ] 9.1 Automated tests: tenancy, export redaction, filters, score, status, auth, CAPTCHA, cookies
 - [ ] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
 - [ ] 9.3 Browser walkthrough of every screen against the design screenshots
+- [x] 9.4 Production configuration verified by booting production mode: single database, Solid Queue worker building an export, SSL headers, CSP with nonce, no signed links in logs
 
 ## 10. Deliverables
 

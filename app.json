@@ -1,0 +1,22 @@
+{
+  "name": "ergocheck",
+  "description": "Company-admin assessments dashboard with company-scoped CSV exports",
+  "buildpacks": [
+    { "url": "heroku/nodejs" },
+    { "url": "heroku/ruby" }
+  ],
+  "addons": [ "heroku-postgresql:essential-0" ],
+  "formation": {
+    "web": { "quantity": 1 },
+    "worker": { "quantity": 1 }
+  },
+  "env": {
+    "RAILS_MASTER_KEY": { "description": "Contents of config/master.key" },
+    "ACTIVE_STORAGE_SERVICE": { "value": "amazon", "description": "Heroku's disk is ephemeral; exports live in S3" },
+    "AWS_S3_BUCKET": { "description": "Private bucket for generated exports" },
+    "AWS_ACCESS_KEY_ID": { "description": "Credentials with access to that bucket only" },
+    "AWS_SECRET_ACCESS_KEY": { "description": "Secret for the key above" },
+    "AWS_REGION": { "value": "eu-west-1" },
+    "WEB_CONCURRENCY": { "value": "2" }
+  }
+}
