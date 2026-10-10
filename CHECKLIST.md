@@ -45,7 +45,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 - [x] 5.4 Detail drawer (sections breakdown, status control, toast on save)
 - [x] 5.5 Two dashboard indexes built concurrently: `(company_id, created_at DESC, id DESC)` for the page, `(company_id, status, created_at DESC)` for the counts
 - [x] 5.6 Reproducible benchmark (`rake perf:seed`, `rake perf:benchmark`) with before/after numbers
-- [ ] 5.7 Log hygiene: filtered parameters, filtered attributes, no raw responses in logs
+- [x] 5.7 Log hygiene: filtered parameters, filtered attributes, no raw responses in logs
 
 ## 6. Task 1 — Company-scoped CSV export
 

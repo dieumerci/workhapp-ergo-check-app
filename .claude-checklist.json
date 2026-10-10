@@ -1,5 +1,5 @@
 {
-  "activeIndex": 4,
+  "activeIndex": 5,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -95,7 +95,7 @@
       "id": "5",
       "title": "Task 2 dashboard",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "5.1",
@@ -130,7 +130,7 @@
         {
           "id": "5.7",
           "title": "Log hygiene",
-          "done": false
+          "done": true
         }
       ]
     },
