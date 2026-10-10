@@ -6,13 +6,13 @@ import { LockIcon } from '@/components/Icons'
 import { ToastProvider } from '@/components/Toast'
 import { cx } from '@/lib/cx'
 
-type NavItem = { href: string; label: string; tag?: string; match: string[] }
+type NavItem = { href: string; label: string; tag?: string; ops?: boolean; match: string[] }
 
 const NAV: NavItem[] = [
   { href: '/assessments', label: 'Assessments', match: ['/', '/assessments'] },
   { href: '/exports', label: 'Exports', match: ['/exports'] },
-  { href: '/release_plan', label: 'Release plan', tag: 'Ops', match: ['/release_plan'] },
-  { href: '/safeguards', label: 'Safeguards', tag: 'Notes', match: ['/safeguards'] },
+  { href: '/release_plan', label: 'Release plan', tag: 'Ops', ops: true, match: ['/release_plan'] },
+  { href: '/safeguards', label: 'Safeguards', tag: 'Notes', ops: true, match: ['/safeguards'] },
 ]
 
 function isCurrent(item: NavItem, path: string): boolean {
@@ -32,7 +32,7 @@ export function BrandMark() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const page = usePage()
-  const { auth, exports } = page.props
+  const { auth, exports, ops_pages } = page.props
   const activeExports = exports.filter(isActive).length
   const path = page.url.split('?')[0]
   const [cookieDialogOpen, setCookieDialogOpen] = useState(false)
@@ -44,7 +44,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <aside className="flex flex-none flex-col gap-4 border-b border-line bg-white px-3.5 py-4 md:sticky md:top-0 md:h-screen md:w-[228px] md:gap-6 md:border-r md:border-b-0 md:py-5">
             <BrandMark />
             <nav aria-label="Main" className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] md:flex-col [&::-webkit-scrollbar]:hidden">
-              {NAV.map((item) => {
+              {NAV.filter((item) => ops_pages || !item.ops).map((item) => {
                 const active = isCurrent(item, path)
                 return (
                   <Link

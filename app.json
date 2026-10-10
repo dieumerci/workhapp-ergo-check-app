@@ -12,6 +12,7 @@
   },
   "env": {
     "RAILS_MASTER_KEY": { "description": "Contents of config/master.key" },
+    "SHOW_OPS_PAGES": { "value": "true", "description": "Show the internal release-plan and safeguards pages (hidden in production by default; on for a demo deployment)" },
     "ACTIVE_STORAGE_SERVICE": { "value": "amazon", "description": "Heroku's disk is ephemeral; exports live in S3" },
     "AWS_S3_BUCKET": { "description": "Private bucket for generated exports" },
     "AWS_ACCESS_KEY_ID": { "description": "Credentials with access to that bucket only" },

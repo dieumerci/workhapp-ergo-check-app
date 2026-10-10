@@ -19,6 +19,7 @@ export type SharedProps = {
   exports: ExportView[]
   export_columns: string[]
   status_options: StatusOption[]
+  ops_pages: boolean
 }
 
 export type StatusValue =

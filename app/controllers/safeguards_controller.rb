@@ -1,4 +1,6 @@
 class SafeguardsController < InertiaController
+  ops_only
+
   def show
     render inertia: "safeguards/index", props: {
       cards: Safeguards.cards.map(&:to_h),

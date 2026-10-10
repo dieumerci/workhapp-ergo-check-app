@@ -23,6 +23,10 @@ Rails.application.routes.draw do
   get "release_plan", to: "release_plans#show"
   get "release_plan/normalize", to: "release_plans#normalize"
 
+  # Active Storage's other routes are switched off (see config/application.rb); the
+  # Disk service still needs its signed, short-lived download link.
+  get "/rails/active_storage/disk/:encoded_key/*filename", to: "active_storage/disk#show", as: :rails_disk_service
+
   resource :session, only: %i[new create destroy]
   resource :captcha, only: :show
   resource :cookie_consent, only: :create

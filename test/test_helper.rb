@@ -39,12 +39,12 @@ module ActiveSupport
       io = StringIO.new
       logger = ActiveSupport::Logger.new(io)
       logger.level = Logger::DEBUG
-      previous = [ Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger ]
-      Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = ActiveJob::Base.logger = logger
+      previous = [ Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger, ActiveStorage.logger ]
+      Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = ActiveJob::Base.logger = ActiveStorage.logger = logger
       yield
       io.string
     ensure
-      Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger = previous
+      Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger, ActiveStorage.logger = previous
     end
 
     SECTION_KEYS = %w[workstation_setup posture_movement breaks_recovery discomfort_reported].freeze

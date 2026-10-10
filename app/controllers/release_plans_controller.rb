@@ -1,5 +1,7 @@
 # Internal ops page for the status normalization release (plan only).
 class ReleasePlansController < InertiaController
+  ops_only
+
   MAX_PROBE_LENGTH = 100
 
   def show

@@ -15,6 +15,13 @@ class InertiaController < ApplicationController
   inertia_share status_options: -> { Status::CANONICAL.map { |value| { value: value, label: Status.label(value) } } }
   inertia_share export_columns: -> { AssessmentExports::Builder::COLUMNS }
 
+  inertia_share ops_pages: -> { Rails.configuration.x.ops_pages }
+
+  # Marks a controller as an internal ops page: 404 unless SHOW_OPS_PAGES is on.
+  def self.ops_only
+    before_action { head :not_found unless Rails.configuration.x.ops_pages }
+  end
+
   inertia_share auth: -> {
     {
       admin: Current.admin && { name: Current.admin.name, initials: Current.admin.initials },

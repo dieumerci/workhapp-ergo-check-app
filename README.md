@@ -148,9 +148,10 @@ queue and cache tables live in it too.
 | `DATABASE_URL` | set by the Postgres add-on |
 | `ACTIVE_STORAGE_SERVICE=amazon` | **required on Heroku**, whose disk is ephemeral; plus `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` |
 | `EXPORT_MAX_SECONDS` | time budget per export (default 300) |
+| `SHOW_OPS_PAGES` | the Release plan and Safeguards pages are internal ops notes: hidden (404) in production unless this is `true` |
 | `RAILS_LOG_LEVEL` | defaults to `info`; do not run production at `debug` with health data |
 
-Production forces SSL, sends a strict Content-Security-Policy, and never seeds demo accounts. The Dockerfile now builds
+Production forces SSL, sends a strict Content-Security-Policy, never seeds demo accounts, refuses to boot on an ephemeral-disk platform without object storage configured, and does not route Active Storage's unauthenticated upload endpoints. The Dockerfile now builds
 the Vite bundle, but I could not run a Docker build in my environment, so treat it as unverified.
 
 ## Demo script (5–10 minutes)
