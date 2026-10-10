@@ -28,6 +28,20 @@ module ActiveSupport
       Assessment.create!({ company: company, employee: employee }.merge(attrs))
     end
 
+    # Runs the block with the log at DEBUG (so SQL and parameters are written)
+    # and returns everything that was logged.
+    def captured_log
+      io = StringIO.new
+      logger = ActiveSupport::Logger.new(io)
+      logger.level = Logger::DEBUG
+      previous = [ Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger ]
+      Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = ActiveJob::Base.logger = logger
+      yield
+      io.string
+    ensure
+      Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger = previous
+    end
+
     SECTION_KEYS = %w[workstation_setup posture_movement breaks_recovery discomfort_reported].freeze
 
     def sections_json(*values)

@@ -17,18 +17,6 @@ class LogHygieneTest < ActionDispatch::IntegrationTest
     )
   end
 
-  def captured_log
-    io = StringIO.new
-    logger = ActiveSupport::Logger.new(io)
-    logger.level = Logger::DEBUG
-    previous = [ Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger ]
-    Rails.logger = ActionController::Base.logger = ActiveRecord::Base.logger = logger
-    yield
-    io.string
-  ensure
-    Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger = previous
-  end
-
   def assert_no_leak(log, *secrets)
     secrets.each { |secret| assert_not_includes log, secret, "#{secret.inspect} was written to the log" }
   end

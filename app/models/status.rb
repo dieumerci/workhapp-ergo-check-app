@@ -58,6 +58,13 @@ module Status
     normalize(raw) || UNKNOWN_TARGET
   end
 
+  # The raw stored values, out of +raw_values+, that classify as +canonical+.
+  # Lets a status filter match every legacy spelling of a status (including
+  # nil and "") with a plain IN list, so the index can still be used.
+  def matching(raw_values, canonical)
+    raw_values.select { |raw| classify(raw) == canonical }
+  end
+
   def known?(raw)
     !normalize(raw).nil?
   end

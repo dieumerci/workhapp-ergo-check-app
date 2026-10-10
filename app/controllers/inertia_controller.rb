@@ -7,10 +7,24 @@ class InertiaController < ApplicationController
     { decided: cookie_preferences.decided?, preferences: cookie_preferences.preferences_allowed? }
   }
 
+  # The company's recent exports. A lambda, so the export page's polling can
+  # reload just this prop; it is also what drives the "Exports" menu badge.
+  inertia_share exports: -> { exports_payload }
+
   inertia_share auth: -> {
     {
       admin: Current.admin && { name: Current.admin.name, initials: Current.admin.initials },
       company: Current.company && { name: Current.company.name }
     }
   }
+
+  private
+
+  def exports_payload
+    return [] unless Current.company
+
+    Current.company.assessment_exports.with_attached_file.recent.limit(20).map do |export|
+      export.to_view.merge(download_path: export.downloadable? ? download_export_path(export) : nil)
+    end
+  end
 end

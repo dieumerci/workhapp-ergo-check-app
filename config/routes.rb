@@ -7,6 +7,14 @@ Rails.application.routes.draw do
   root "assessments#index"
   resources :assessments, only: %i[index update]
 
+  resources :exports, only: %i[index create] do
+    collection { get :preview }
+    member do
+      get :download
+      post :retry
+    end
+  end
+
   resource :session, only: %i[new create destroy]
   resource :captcha, only: :show
   resource :cookie_consent, only: :create

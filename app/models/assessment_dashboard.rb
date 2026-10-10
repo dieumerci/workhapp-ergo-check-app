@@ -107,6 +107,6 @@ class AssessmentDashboard
 
   # The raw spellings present in this range that classify as the chosen status.
   def raw_values_for(raw_counts)
-    raw_counts.keys.select { |raw| Status.classify(raw) == @filters.status }
+    Status.matching(raw_counts.keys, @filters.status)
   end
 end

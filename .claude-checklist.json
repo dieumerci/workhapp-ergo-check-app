@@ -44,7 +44,7 @@
       "id": "3",
       "title": "Identity, tenancy, cookies, CAPTCHA",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "3.1",
@@ -64,7 +64,7 @@
         {
           "id": "3.4",
           "title": "No client-supplied company identifier",
-          "done": false
+          "done": true
         },
         {
           "id": "3.5",
@@ -143,22 +143,22 @@
         {
           "id": "6.1",
           "title": "Export model and state machine",
-          "done": false
+          "done": true
         },
         {
           "id": "6.2",
           "title": "Background job",
-          "done": false
+          "done": true
         },
         {
           "id": "6.3",
           "title": "Two filters, redacted columns",
-          "done": false
+          "done": true
         },
         {
           "id": "6.4",
           "title": "Tenant-checked, expiring download",
-          "done": false
+          "done": true
         },
         {
           "id": "6.5",

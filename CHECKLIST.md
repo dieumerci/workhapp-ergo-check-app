@@ -29,7 +29,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 - [x] 3.1 Company-admin sign-in / sign-out, `Current.company` derived from the session, rate-limited
 - [x] 3.2 CAPTCHA on sign-in (server-rendered PNG, digest in session, single use, expiring)
 - [x] 3.3 Cookie consent: signed consent cookie, banner + settings dialog, opt-in "remember my filters" cookie store (wired to the dashboard in 5.1)
-- [ ] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
+- [x] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
 - [x] 3.5 Seed data: two tenants, 64 Northwind assessments matching the design, deliberately messy legacy statuses
 
 ## 4. UI shell (from the design)
@@ -49,10 +49,10 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 6. Task 1 — Company-scoped CSV export
 
-- [ ] 6.1 `assessment_exports` table, model, state machine (queued → processing → ready / failed)
-- [ ] 6.2 Background job builds the CSV in batches, updates progress, fails safely with a generic reason
-- [ ] 6.3 Exactly two filters (date range, status); six redacted columns; one-way `employee_ref`; CSV-injection guard
-- [ ] 6.4 Download is tenant-checked and expires after 24 hours
+- [x] 6.1 `assessment_exports` table, model, state machine (queued → processing → ready / failed)
+- [x] 6.2 Background job builds the CSV in batches, updates progress, fails safely with a generic reason
+- [x] 6.3 Exactly two filters (date range, status); six redacted columns; one-way `employee_ref`; CSV-injection guard
+- [x] 6.4 Download is tenant-checked and expires after 24 hours
 - [ ] 6.5 Export modal: locked company, match count, validation, in-progress / ready states
 - [ ] 6.6 Exports page: history, progress bars, download, retry, nav badge, polling
 

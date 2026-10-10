@@ -54,6 +54,9 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+
+  # Minitest 6 moved stubs and mocks into their own gem
+  gem "minitest-mock"
 end
 
 gem "inertia_rails", "~> 3.22"
@@ -62,3 +65,6 @@ gem "vite_rails", "~> 3.11"
 
 # Pure-Ruby PNG encoder: renders the sign-in CAPTCHA image without ImageMagick or libvips
 gem "chunky_png", "~> 1.4"
+
+# CSV left the default gems in Ruby 3.4; declared so Ruby 3.3 does not warn and the upgrade is painless
+gem "csv"
