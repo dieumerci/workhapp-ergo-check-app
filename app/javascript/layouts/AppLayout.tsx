@@ -43,7 +43,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex min-h-screen flex-col md:flex-row">
           <aside className="flex flex-none flex-col gap-4 border-b border-line bg-white px-3.5 py-4 md:sticky md:top-0 md:h-screen md:w-[228px] md:gap-6 md:border-r md:border-b-0 md:py-5">
             <BrandMark />
-            <nav aria-label="Main" className="flex gap-0.5 overflow-x-auto md:flex-col">
+            <nav aria-label="Main" className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] md:flex-col [&::-webkit-scrollbar]:hidden">
               {NAV.map((item) => {
                 const active = isCurrent(item, path)
                 return (
