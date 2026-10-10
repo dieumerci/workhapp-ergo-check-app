@@ -34,7 +34,7 @@ module Safeguards
         "Ten rows per page, fetched from the server, never the whole table.",
         "Two indexes back the page: company and newest first, and company and status.",
         "Only the columns shown are loaded. No raw responses.",
-        "Measured on a 300,000-row company: the old page took 94.5 s and 300,001 queries, this one about 23 ms and 2 queries (docs/benchmarks)."
+        "Measured on a 300,000-row company: the old page took 94.5 s and 300,001 queries, this one about 23 ms and 2 queries (benchmarks/)."
       ]),
       Card.new(task: "Task 2 · Score", title: "Always present, always correct", points: [
         "The score is the rounded average of the four section scores.",

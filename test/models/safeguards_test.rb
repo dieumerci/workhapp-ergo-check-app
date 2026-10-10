@@ -28,7 +28,7 @@ class SafeguardsTest < ActiveSupport::TestCase
   end
 
   test "the benchmark numbers quoted on the page match the committed report" do
-    report = File.read(Rails.root.join("docs/benchmarks/dashboard-2026-10-10.txt"))
+    report = File.read(Rails.root.join("benchmarks/dashboard-2026-10-10.txt"))
     dashboard = Safeguards.cards.find { |card| card.title == "Faster on large data" }.points.join(" ")
 
     assert_match(/300001/, report)

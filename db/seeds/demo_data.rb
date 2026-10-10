@@ -54,9 +54,21 @@ class DemoData
     seed_assessments(northwind, domain: "northwind.example", count: 64, generator_seed: 7, mess: true, fixed_ids: true)
     seed_assessments(harbor, domain: "harborpine.example", count: 24, generator_seed: 99, mess: false)
     ActiveRecord::Base.connection.reset_pk_sequence!("assessments")
+    print_accounts
   end
 
   private
+
+  def print_accounts
+    puts <<~TEXT
+
+      Demo company admins (sign in at http://localhost:3000):
+        maya.reyes@northwind.example   Northwind Logistics (64 assessments)
+        jonas.weber@harborpine.example Harbor & Pine Clinics (24 assessments)
+      Password for both: #{DEMO_PASSWORD}
+      (set DEMO_ADMIN_PASSWORD before seeding to choose your own)
+    TEXT
+  end
 
   def create_admin(company, name, email)
     Admin.find_or_create_by!(email: email) do |admin|

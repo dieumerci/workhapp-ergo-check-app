@@ -6,7 +6,7 @@ by accident, and each step has to be run (and checked) by a person, in order.
 
 Run one with `heroku pg:psql --app <app> < db/release_plan/<file>.sql`.
 The full sequence, who runs what and when, and how to roll back each step are in
-`SOLUTION.md` (section "Release and rollback plan") and `docs/release-runbook.md`.
+`SOLUTION.md` (section "Release and rollback plan") and `db/release_plan/RUNBOOK.md`.
 
 | File | Release step | Safe while live? |
 |---|---|---|
