@@ -1,8 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { cx } from '@/lib/cx'
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+
+// Open dialogs, topmost last. Only the topmost one reacts to Escape and Tab, so
+// stacked dialogs close one at a time and focus cannot wander into a lower one.
+const openDialogs: symbol[] = []
 
 type DialogProps = {
   open: boolean
@@ -12,8 +17,10 @@ type DialogProps = {
   children: ReactNode
 }
 
-// Modal / drawer shell: backdrop click and Escape close it, Tab stays inside,
-// page scroll is locked and focus returns to whatever opened it.
+// Modal / drawer shell. Rendered in a portal outside the app root, which is made
+// inert while any dialog is open (so nothing behind it can be reached with Tab or a
+// screen reader). Backdrop click and Escape close it, Tab stays inside it, page scroll
+// is locked, and focus returns to whatever opened it.
 export default function Dialog({ open, onClose, labelledBy, variant = 'modal', children }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null)
   const closeRef = useRef(onClose)
@@ -25,12 +32,19 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
   useEffect(() => {
     if (!open) return
 
+    const id = Symbol('dialog')
+    openDialogs.push(id)
+    const appRoot = document.getElementById('app')
+    appRoot?.setAttribute('inert', '')
+
     const previouslyFocused = document.activeElement as HTMLElement | null
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     panel.current?.focus()
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (openDialogs[openDialogs.length - 1] !== id) return
+
       if (event.key === 'Escape') {
         event.stopPropagation()
         closeRef.current()
@@ -45,10 +59,16 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
       }
       const first = items[0]
       const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      const active = document.activeElement
+      // Focus on the panel itself (where it starts) or outside it: bring it inside.
+      const inside = active !== panel.current && panel.current.contains(active)
+      if (!inside) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && active === first) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault()
         first.focus()
       }
@@ -57,6 +77,8 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
+      openDialogs.splice(openDialogs.indexOf(id), 1)
+      if (openDialogs.length === 0) appRoot?.removeAttribute('inert')
       document.body.style.overflow = previousOverflow
       previouslyFocused?.focus?.()
     }
@@ -66,7 +88,7 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
 
   const isModal = variant === 'modal'
 
-  return (
+  return createPortal(
     <>
       <div
         onClick={onClose}
@@ -88,6 +110,7 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
       >
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

@@ -1,12 +1,13 @@
 import { usePage } from '@inertiajs/react'
 import { usePersistedState } from '@/hooks/usePersistedState'
+import { RELEASE_STEPS_KEY } from '@/lib/preferenceStorage'
 import { cx } from '@/lib/cx'
 import type { PlanStep } from '@/types/release'
 
 export default function StepsCard({ steps }: { steps: PlanStep[] }) {
   const { cookie_consent } = usePage().props
   // Ticking steps is a convenience; remember it across reloads only with the Preferences cookie consent.
-  const [done, setDone] = usePersistedState<number[]>('ergocheck.releasePlan.done', [], cookie_consent.preferences)
+  const [done, setDone] = usePersistedState<number[]>(RELEASE_STEPS_KEY, [], cookie_consent.preferences)
   const percent = Math.round((done.length / steps.length) * 100)
 
   const toggle = (index: number) =>

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, usePage } from '@inertiajs/react'
 import { CookieBanner, CookieDialog } from '@/components/CookieConsent'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { ExportProvider, isActive } from '@/components/exports/ExportProvider'
 import { LockIcon } from '@/components/Icons'
 import { ToastProvider } from '@/components/Toast'
@@ -121,7 +122,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </button>
               </div>
             </header>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
         <CookieBanner onCustomize={() => setCookieDialogOpen(true)} />

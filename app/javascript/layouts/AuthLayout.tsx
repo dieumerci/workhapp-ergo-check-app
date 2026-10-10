@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { CookieBanner, CookieDialog } from '@/components/CookieConsent'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { ToastProvider } from '@/components/Toast'
 import { BrandMark } from '@/layouts/AppLayout'
 
@@ -10,7 +11,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <ToastProvider>
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-10">
         <BrandMark />
-        <main className="w-full max-w-[400px]">{children}</main>
+        <main className="w-full max-w-[400px]">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
         <button
           type="button"
           onClick={() => setCookieDialogOpen(true)}

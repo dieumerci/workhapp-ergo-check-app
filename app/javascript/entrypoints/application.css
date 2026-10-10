@@ -19,7 +19,9 @@
   --color-ink: #1c2421;
   --color-ink-2: #3f4a45;
   --color-muted: #66706b;
-  --color-subtle: #8a938e;
+  /* The prototype's #8a938e is only 3.2:1 on white (2.8:1 on the page background), below WCAG AA for
+     text, and it carries real information ("Not scored yet", employee refs). Darkened to 5.0:1 / 4.5:1. */
+  --color-subtle: #68716c;
   --color-line: #e4e2da;
   --color-line-soft: #efeee8;
   --color-control: #d6d4cb;

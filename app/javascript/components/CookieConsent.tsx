@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import Dialog from '@/components/Dialog'
 import { CloseIcon } from '@/components/Icons'
+import { clearPreferenceStorage } from '@/lib/preferenceStorage'
 
 type Choice = { preferences: boolean }
 
 function saveChoice({ preferences }: Choice, onDone?: () => void) {
+  // Withdrawing consent must also remove what was already remembered in this browser.
+  if (!preferences) clearPreferenceStorage()
   router.post(
     '/cookie_consent',
     { preferences },
