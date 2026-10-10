@@ -1,5 +1,5 @@
 {
-  "activeIndex": 6,
+  "activeIndex": 7,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -186,7 +186,7 @@
         {
           "id": "7.2",
           "title": "Guarded backfill tasks",
-          "done": false
+          "done": true
         },
         {
           "id": "7.3",

@@ -59,7 +59,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 ## 7. Task 3 — Plan-only backfill and release plan
 
 - [ ] 7.1 Release plan page: mapping, live normalizer tester, 8 steps with live/window tags, rollback ladder
-- [ ] 7.2 Backfill designed but not executed (`status:backfill:report` read-only, `status:backfill:run` guarded)
+- [x] 7.2 Backfill designed but not executed (`status:backfill:report` read-only, `status:backfill:run` guarded)
 - [ ] 7.3 Backup / release / rollback runbook for a Heroku-like environment
 
 ## 8. Safeguards page
