@@ -1,5 +1,5 @@
 {
-  "activeIndex": 8,
+  "activeIndex": 11,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -176,7 +176,7 @@
       "id": "7",
       "title": "Task 3 plan-only backfill",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "7.1",
@@ -191,7 +191,7 @@
         {
           "id": "7.3",
           "title": "Runbook",
-          "done": false
+          "done": true
         }
       ]
     },
@@ -212,22 +212,22 @@
       "id": "9",
       "title": "Quality gates",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "9.1",
           "title": "Automated tests",
-          "done": false
+          "done": true
         },
         {
           "id": "9.2",
           "title": "Linters and scanners clean",
-          "done": false
+          "done": true
         },
         {
           "id": "9.3",
           "title": "Browser walkthrough",
-          "done": false
+          "done": true
         },
         {
           "id": "9.4",
@@ -245,22 +245,80 @@
         {
           "id": "10.1",
           "title": "README.md",
-          "done": false
+          "done": true
         },
         {
           "id": "10.2",
           "title": "SOLUTION.md",
-          "done": false
+          "done": true
         },
         {
           "id": "10.3",
           "title": "Checklist ticked",
-          "done": false
+          "done": true
         },
         {
           "id": "10.4",
           "title": "Loom demo (owner)",
           "done": false
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "title": "Independent review and production-readiness audit",
+      "branch": null,
+      "done": true,
+      "subtasks": [
+        {
+          "id": "11.1",
+          "title": "CAPTCHA/session state server-side",
+          "done": true
+        },
+        {
+          "id": "11.2",
+          "title": "Stuck exports",
+          "done": true
+        },
+        {
+          "id": "11.3",
+          "title": "Data correctness and redaction",
+          "done": true
+        },
+        {
+          "id": "11.4",
+          "title": "Security hardening",
+          "done": true
+        },
+        {
+          "id": "11.5",
+          "title": "Backfill rollback",
+          "done": true
+        },
+        {
+          "id": "11.6",
+          "title": "Accessibility and resilience",
+          "done": true
+        },
+        {
+          "id": "11.7",
+          "title": "Accessible CAPTCHA alternative",
+          "done": true
+        },
+        {
+          "id": "11.8",
+          "title": "Hygiene",
+          "done": true
+        },
+        {
+          "id": "11.9",
+          "title": "Audit written",
+          "done": true
+        },
+        {
+          "id": "11.10",
+          "title": "Release prep",
+          "done": true
         }
       ]
     }

@@ -40,7 +40,7 @@ In development, background jobs run in-process, so exports complete without a se
 ### Quality gates (all expected to be clean)
 
 ```bash
-bin/rails test           # 180+ tests: tenancy, redaction, filters, score, status, auth, CAPTCHA, cookies, logs
+bin/rails test           # 228 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories

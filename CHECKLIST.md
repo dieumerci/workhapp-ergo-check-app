@@ -60,7 +60,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 - [x] 7.1 Release plan page: mapping, live normalizer tester, 8 steps with live/window tags, rollback ladder
 - [x] 7.2 Backfill designed but not executed (`status:backfill:report` read-only, `status:backfill:run` guarded)
-- [ ] 7.3 Backup / release / rollback runbook for a Heroku-like environment
+- [x] 7.3 Backup / release / rollback runbook for a Heroku-like environment (`db/release_plan/RUNBOOK.md`, SOLUTION §6)
 
 ## 8. Safeguards page
 
@@ -68,17 +68,33 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 9. Quality gates (zero warnings)
 
-- [ ] 9.1 Automated tests: tenancy, export redaction, filters, score, status, auth, CAPTCHA, cookies
-- [ ] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
-- [ ] 9.3 Browser walkthrough of every screen against the design screenshots
+- [x] 9.1 Automated tests (228): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening
+- [x] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
+- [x] 9.3 Browser walkthrough of every screen against the design screenshots
 - [x] 9.4 Production configuration verified by booting production mode: single database, Solid Queue worker building an export, SSL headers, CSP with nonce, no signed links in logs
 
 ## 10. Deliverables
 
-- [ ] 10.1 `README.md` — how to run locally and how everything works
-- [ ] 10.2 `SOLUTION.md` — design, trade-offs, measurements, release/rollback plan, build log with reasons
-- [ ] 10.3 This checklist fully ticked
+- [x] 10.1 `README.md` — how to run locally and how everything works
+- [x] 10.2 `SOLUTION.md` — design, trade-offs, measurements, release/rollback plan, build log with reasons
+- [x] 10.3 This checklist fully ticked (10.4 is the owner's)
 - [ ] 10.4 Loom demo (owner records this — see README "Demo script")
+
+## 11. Independent review and production-readiness audit (all fixed)
+
+Findings raised by an independent read-only reviewer and by the audit; full detail and evidence in
+`docs/PRODUCTION_AUDIT_CHECKLIST.md`.
+
+- [x] 11.1 CAPTCHA single-use and sessions revocable: state moved server-side (AUD-v1-001)
+- [x] 11.2 Exports whose worker died: heartbeat, takeover, reaper, live-only cap, preview throttle (AUD-v1-002, 006)
+- [x] 11.3 Data correctness and redaction: blank status, dedicated export select, tenant-pinned join, score parsing, 48-bit refs (AUD-v1-005, 011, 012, 016, 017)
+- [x] 11.4 Security: unused upload routes closed, signed links out of logs, ephemeral-disk guard, ops pages gated (AUD-v1-003, 007, 014, 015)
+- [x] 11.5 Backfill rollback leaves later edits alone (AUD-v1-004)
+- [x] 11.6 Accessibility and resilience: contrast, dialog focus/inert, error boundary, consent clears local storage (AUD-v1-008, 009, 013, 018)
+- [x] 11.7 Accessible text alternative to the image CAPTCHA (AUD-v1-010)
+- [x] 11.8 Hygiene: `.env.example`, CI seeds step, lockfile (AUD-v1-019, 020, 021)
+- [x] 11.9 Production-readiness audit written (`docs/PRODUCTION_AUDIT_CHECKLIST.md`); 8 low-severity items await owner sign-off
+- [x] 11.10 Release prep: `CHANGELOG.md` and version `0.1.0` (tag is the owner's to create)
 
 ## Out of scope (quarantined)
 
