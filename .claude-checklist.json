@@ -1,5 +1,5 @@
 {
-  "activeIndex": 2,
+  "activeIndex": 3,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -26,17 +26,17 @@
       "id": "2",
       "title": "Task 3 write path",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "2.1",
           "title": "Status value object",
-          "done": false
+          "done": true
         },
         {
           "id": "2.2",
           "title": "Assessment normalises and rejects on save",
-          "done": false
+          "done": true
         }
       ]
     },

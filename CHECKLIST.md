@@ -21,8 +21,8 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 2. Task 3 (write path) — only five statuses go in
 
-- [ ] 2.1 `Status` value object: five canonical values, alias table, `normalize`
-- [ ] 2.2 `Assessment` normalises aliases on save and rejects unknown values (create and update)
+- [x] 2.1 `Status` value object: five canonical values, alias table, `normalize`
+- [x] 2.2 `Assessment` normalises aliases on save and rejects unknown values (create and update)
 
 ## 3. Identity, tenancy, cookies, CAPTCHA
 
