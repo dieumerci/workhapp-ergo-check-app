@@ -54,7 +54,7 @@
         {
           "id": "3.2",
           "title": "CAPTCHA on sign-in",
-          "done": false
+          "done": true
         },
         {
           "id": "3.3",

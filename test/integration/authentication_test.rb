@@ -24,7 +24,7 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "e-mail matching ignores case and whitespace" do
-    post session_path, params: { email: "  MAYA@Example.com ", password: ActiveSupport::TestCase::TEST_PASSWORD }
+    attempt_sign_in(email: "  MAYA@Example.com ", password: ActiveSupport::TestCase::TEST_PASSWORD)
 
     assert_redirected_to root_path
   end
@@ -34,7 +34,7 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     wrong_password = flash_errors
 
-    post session_path, params: { email: "nobody@example.com", password: "whatever-12345" }
+    attempt_sign_in(email: "nobody@example.com", password: "whatever-12345")
     assert_redirected_to new_session_path
     unknown_email = flash_errors
 
@@ -45,10 +45,11 @@ class AuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "blank or malformed credentials are rejected without raising" do
-    post session_path, params: { email: "", password: "" }
+    attempt_sign_in(email: "", password: "")
     assert_redirected_to new_session_path
 
-    post session_path, params: { email: [ "a" ], password: { b: 1 } }
+    get captcha_path
+    post session_path, params: { email: [ "a" ], password: { b: 1 }, captcha: KNOWN_CAPTCHA }
     assert_redirected_to new_session_path
   end
 

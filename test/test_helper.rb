@@ -31,7 +31,22 @@ module ActiveSupport
 end
 
 class ActionDispatch::IntegrationTest
+  KNOWN_CAPTCHA = "48213".freeze
+  DEFAULT_CAPTCHA_GENERATOR = Captcha.code_generator
+
+  # Tests control the CAPTCHA answer through the generator seam, so the real
+  # image rendering and digest verification are still exercised end to end.
+  setup { Captcha.code_generator = -> { KNOWN_CAPTCHA } }
+  teardown { Captcha.code_generator = DEFAULT_CAPTCHA_GENERATOR }
+
+  # Loads a fresh challenge image (which stores its digest in the session),
+  # then submits the sign-in form with the given answer.
+  def attempt_sign_in(email:, password:, captcha: KNOWN_CAPTCHA)
+    get captcha_path
+    post session_path, params: { email: email, password: password, captcha: captcha }
+  end
+
   def sign_in_as(admin, password: ActiveSupport::TestCase::TEST_PASSWORD)
-    post session_path, params: { email: admin.email, password: password }
+    attempt_sign_in(email: admin.email, password: password)
   end
 end

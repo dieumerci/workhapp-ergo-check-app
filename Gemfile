@@ -62,3 +62,6 @@ end
 gem "inertia_rails", "~> 3.22"
 
 gem "vite_rails", "~> 3.11"
+
+# Pure-Ruby PNG encoder: renders the sign-in CAPTCHA image without ImageMagick or libvips
+gem "chunky_png", "~> 1.4"

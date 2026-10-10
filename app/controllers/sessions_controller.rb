@@ -11,6 +11,11 @@ class SessionsController < InertiaController
   end
 
   def create
+    # The CAPTCHA is checked (and consumed) before the credentials are looked at.
+    unless Captcha.verify?(session, params[:captcha])
+      return redirect_to new_session_path, inertia: { errors: { captcha: [ "That code didn't match. Please try the new image." ] } }
+    end
+
     admin = authenticate_admin
 
     if admin
