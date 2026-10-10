@@ -9,6 +9,11 @@ class AssessmentExport < ApplicationRecord
   LINK_LIFETIME = 24.hours
   DOWNLOAD_URL_LIFETIME = 1.minute
   MAX_ACTIVE_PER_COMPANY = 3
+  # The builder touches updated_at after every batch of 1,000 rows (a heartbeat).
+  # A "processing" export that has been silent this long lost its worker.
+  STALE_AFTER = 10.minutes
+  # A "queued" export that nothing picked up in this long lost its job.
+  QUEUED_TIMEOUT = 1.hour
 
   # What a failure means to the user. Raw exception messages can contain SQL
   # and row data, so they are never stored or shown.
@@ -29,13 +34,30 @@ class AssessmentExport < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc, id: :desc) }
   scope :active, -> { where(state: %w[queued processing]) }
+  # Active AND still alive: what counts towards the per-company cap, so exports
+  # whose worker died cannot lock a company out.
+  scope :in_flight, -> {
+    where(state: "queued", created_at: QUEUED_TIMEOUT.ago..)
+      .or(where(state: "processing", updated_at: STALE_AFTER.ago..))
+  }
+  scope :stalled, -> {
+    where(state: "queued", created_at: ...QUEUED_TIMEOUT.ago)
+      .or(where(state: "processing", updated_at: ...STALE_AFTER.ago))
+  }
 
   STATES.each do |name|
     define_method(:"#{name}?") { state == name }
   end
 
   def active?
-    queued? || processing?
+    (queued? || processing?) && !stalled?
+  end
+
+  # Claimed or queued, but nothing has made progress for too long: the worker or
+  # the job is gone. Shown as failed (and retryable) at once; ReapStuckExportsJob
+  # then records it.
+  def stalled?
+    (processing? && updated_at < STALE_AFTER.ago) || (queued? && created_at < QUEUED_TIMEOUT.ago)
   end
 
   def expired?
@@ -52,18 +74,26 @@ class AssessmentExport < ApplicationRecord
     file.url(expires_in: DOWNLOAD_URL_LIFETIME, disposition: "attachment", filename: file.filename)
   end
 
-  # What the page shows; "expired" is derived, not stored.
+  # What the page shows; "expired" and "stalled" are derived, not stored.
   def display_state
+    return "failed" if stalled?
+
     expired? ? "expired" : state
   end
 
   def error_message
-    ERROR_MESSAGES[error_code] if failed?
+    ERROR_MESSAGES[error_code || "error"] if failed? || stalled?
   end
 
-  # Claims the job atomically so it can never run twice.
+  # Claims the job atomically so it can never run twice at once. A "processing"
+  # export whose heartbeat went silent (its worker died) can be taken over, which
+  # is what lets a re-run after a crash or a graceful shutdown finish the work.
   def claim!
-    claimed = self.class.where(id: id, state: "queued").update_all(state: "processing", started_at: Time.current, updated_at: Time.current)
+    now = Time.current
+    claimed = self.class
+      .where(id: id)
+      .where("state = 'queued' OR (state = 'processing' AND updated_at < ?)", STALE_AFTER.ago)
+      .update_all(state: "processing", progress: 0, started_at: now, updated_at: now)
     reload if claimed == 1
     claimed == 1
   end
@@ -94,7 +124,7 @@ class AssessmentExport < ApplicationRecord
       status_label: status_filter == "all" ? "All statuses" : Status.label(status_filter),
       requested_at: created_at.iso8601,
       error: error_message,
-      can_retry: failed? || expired?
+      can_retry: failed? || expired? || stalled?
     }
   end
 
@@ -113,7 +143,7 @@ class AssessmentExport < ApplicationRecord
 
   def company_has_capacity
     return if company.nil?
-    return if company.assessment_exports.active.count < MAX_ACTIVE_PER_COMPANY
+    return if company.assessment_exports.in_flight.count < MAX_ACTIVE_PER_COMPANY
 
     errors.add(:base, "You already have #{MAX_ACTIVE_PER_COMPANY} exports in progress. Wait for one to finish.")
   end

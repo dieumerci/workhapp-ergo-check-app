@@ -314,7 +314,7 @@ class ExportsTest < ActionDispatch::IntegrationTest
   end
 
   test "the exports prop lists only this company's exports, newest first" do
-    mine_old = AssessmentExport.create!(company: @company, admin: @admin, created_at: 2.days.ago)
+    mine_old = AssessmentExport.create!(company: @company, admin: @admin, created_at: 30.minutes.ago)
     mine_new = AssessmentExport.create!(company: @company, admin: @admin)
     AssessmentExport.create!(company: @other_company, admin: @other_admin)
     sign_in_as(@admin)
@@ -350,5 +350,79 @@ class ExportsTest < ActionDispatch::IntegrationTest
     get exports_path
     assert_nil props[:exports].first[:download_path]
     assert_equal "expired", props[:exports].first[:state]
+  end
+
+  # ---- exports whose worker died --------------------------------------------
+
+  test "an export nobody is working on shows as failed with a Retry, not as building forever" do
+    stuck = AssessmentExport.create!(company: @company, admin: @admin)
+    stuck.update_columns(state: "processing", progress: 40, updated_at: 20.minutes.ago)
+    sign_in_as(@admin)
+
+    get exports_path
+
+    view = props[:exports].find { |export| export[:id] == stuck.id }
+    assert_equal "failed", view[:state]
+    assert_equal "Failed", view[:state_label]
+    assert_equal true, view[:can_retry]
+    assert_match(/Something went wrong/, view[:error])
+  end
+
+  test "a stalled export can be retried" do
+    completed
+    stuck = AssessmentExport.create!(company: @company, admin: @admin)
+    stuck.update_columns(state: "processing", updated_at: 20.minutes.ago)
+    sign_in_as(@admin)
+
+    assert_enqueued_with(job: AssessmentExportJob) do
+      post retry_export_path(stuck), headers: { "HTTP_REFERER" => exports_url }
+    end
+  end
+
+  test "a re-run after a crash takes over the dead claim and finishes the export" do
+    completed
+    export = AssessmentExport.create!(company: @company, admin: @admin)
+    export.update_columns(state: "processing", progress: 55, updated_at: 20.minutes.ago)
+
+    AssessmentExportJob.perform_now(export.id)
+
+    assert export.reload.ready?
+    assert_equal 1, export.row_count
+  end
+
+  test "a live claim is left alone" do
+    completed
+    export = AssessmentExport.create!(company: @company, admin: @admin)
+    export.update_columns(state: "processing", progress: 55, updated_at: 1.minute.ago)
+
+    AssessmentExportJob.perform_now(export.id)
+
+    assert export.reload.processing?, "a worker that is still making progress must not be taken over"
+    assert_not export.file.attached?
+  end
+
+  test "the reaper records dead exports as failed and leaves live ones" do
+    dead_processing = AssessmentExport.create!(company: @company, admin: @admin).tap { |e| e.update_columns(state: "processing", updated_at: 20.minutes.ago) }
+    dead_queued = AssessmentExport.create!(company: @company, admin: @admin).tap { |e| e.update_columns(created_at: 2.hours.ago) }
+    live_processing = AssessmentExport.create!(company: @company, admin: @admin).tap { |e| e.update_columns(state: "processing", updated_at: 1.minute.ago) }
+    live_queued = AssessmentExport.create!(company: @company, admin: @admin)
+
+    ReapStuckExportsJob.perform_now
+
+    assert dead_processing.reload.failed?
+    assert dead_queued.reload.failed?
+    assert_equal "error", dead_processing.error_code
+    assert live_processing.reload.processing?
+    assert live_queued.reload.queued?
+  end
+
+  test "dead exports do not count towards the cap, so they cannot lock a company out" do
+    completed
+    3.times { AssessmentExport.create!(company: @company, admin: @admin).update_columns(state: "processing", updated_at: 20.minutes.ago) }
+    sign_in_as(@admin)
+
+    assert_difference "AssessmentExport.count", 1 do
+      request_export
+    end
   end
 end

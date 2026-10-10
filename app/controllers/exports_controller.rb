@@ -10,6 +10,11 @@ class ExportsController < InertiaController
     redirect_back_or_to exports_path, alert: "Too many export requests. Please try again later."
   }
 
+  # The preview runs a company-wide count on every call, so it is limited too.
+  rate_limit to: 60, within: 1.minute, only: :preview, with: -> {
+    render json: { count: 0, error: "Too many requests. Please wait a moment." }, status: :too_many_requests
+  }
+
   def index
     render inertia: {}
   end

@@ -89,4 +89,35 @@ class AssessmentExportTest < ActiveSupport::TestCase
     assert_equal %i[can_retry error from id progress requested_at row_count state state_label status status_label to], view.keys.sort
     assert_equal "Completed", view[:status_label]
   end
+
+  test "stalled means no heartbeat for a while, not merely slow" do
+    processing = export
+    processing.claim!
+
+    assert_not processing.stalled?
+    processing.update_columns(updated_at: 11.minutes.ago)
+    assert processing.stalled?
+    assert_equal "failed", processing.display_state
+    assert_not processing.active?
+  end
+
+  test "claim! takes over only a silent processing export" do
+    record = export
+    assert record.claim!
+
+    fresh = AssessmentExport.find(record.id)
+    assert_not fresh.claim!, "a live worker keeps its claim"
+
+    record.update_columns(updated_at: 11.minutes.ago)
+    assert AssessmentExport.find(record.id).claim!, "a dead worker's claim can be taken"
+  end
+
+  test "in_flight excludes dead exports and the stalled scope finds them" do
+    alive = export
+    dead = export
+    dead.update_columns(state: "processing", updated_at: 20.minutes.ago)
+
+    assert_equal [ alive.id ], AssessmentExport.in_flight.pluck(:id)
+    assert_equal [ dead.id ], AssessmentExport.stalled.pluck(:id)
+  end
 end

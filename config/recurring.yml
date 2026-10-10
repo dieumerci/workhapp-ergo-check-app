@@ -19,3 +19,6 @@ production:
   purge_stale_records:
     class: PurgeStaleRecordsJob
     schedule: every hour at minute 27
+  reap_stuck_exports:
+    class: ReapStuckExportsJob
+    schedule: every 5 minutes
