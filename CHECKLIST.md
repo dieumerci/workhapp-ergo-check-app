@@ -64,7 +64,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 8. Safeguards page
 
-- [ ] 8.1 Four safeguard cards + before/after request log line (produced by the real parameter filter)
+- [x] 8.1 Four safeguard cards + before/after request log line (produced by the real parameter filter)
 
 ## 9. Quality gates (zero warnings)
 

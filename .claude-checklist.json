@@ -1,5 +1,5 @@
 {
-  "activeIndex": 7,
+  "activeIndex": 8,
   "baseBranch": "main",
   "remote": null,
   "note": "Owner gave a blanket go-ahead (\"don't wait for me\"), so edits to pre-existing scaffold files are pre-authorised.",
@@ -199,12 +199,12 @@
       "id": "8",
       "title": "Safeguards page",
       "branch": null,
-      "done": false,
+      "done": true,
       "subtasks": [
         {
           "id": "8.1",
           "title": "Cards and log line",
-          "done": false
+          "done": true
         }
       ]
     },

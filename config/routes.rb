@@ -15,6 +15,7 @@ Rails.application.routes.draw do
     end
   end
 
+  get "safeguards", to: "safeguards#show"
   get "release_plan", to: "release_plans#show"
   get "release_plan/normalize", to: "release_plans#normalize"
 
