@@ -1,4 +1,5 @@
 {
+  "name": "ergocheck",
   "private": true,
   "type": "module",
   "devDependencies": {
