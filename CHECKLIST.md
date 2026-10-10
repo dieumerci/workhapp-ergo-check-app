@@ -26,7 +26,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 3. Identity, tenancy, cookies, CAPTCHA
 
-- [ ] 3.1 Company-admin sign-in / sign-out, `Current.company` derived from the session, rate-limited
+- [x] 3.1 Company-admin sign-in / sign-out, `Current.company` derived from the session, rate-limited
 - [ ] 3.2 CAPTCHA on sign-in (server-rendered PNG, digest in session, single use, expiring)
 - [ ] 3.3 Cookie consent banner + preferences dialog + "remember my filters" cookie that honours consent
 - [ ] 3.4 Every query goes through `Current.company` (no client-supplied company identifier anywhere)
