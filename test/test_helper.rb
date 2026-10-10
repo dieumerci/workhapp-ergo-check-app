@@ -3,6 +3,11 @@ require_relative "../config/environment"
 require "rails/test_help"
 require "inertia_rails/minitest"
 
+# Build the Vite bundle once, here, before the parallel workers fork. Left to
+# autoBuild, every worker races to build it on a cold cache and they delete
+# each other's output (ENOTEMPTY). A no-op when the bundle is already fresh.
+ViteRuby.commands.build
+
 module ActiveSupport
   class TestCase
     # Tests create their own data through these helpers instead of fixtures so
