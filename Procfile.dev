@@ -1,3 +1,5 @@
-
-vite: bin/vite dev
+# Foreman gives each process PORT = base + 100 x its position in this file, so the
+# process that must listen on the documented port (3000, or whatever `PORT=... bin/dev`
+# sets) has to come first. Vite ignores PORT and uses 3036 (config/vite.json).
 web: bin/rails s
+vite: bin/vite dev
