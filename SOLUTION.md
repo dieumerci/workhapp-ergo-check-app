@@ -21,8 +21,32 @@ I followed throughout, from the brief: *operate with restraint*. Targeted, safe 
 | **Task 2** | One grouped `COUNT` plus one page of ten rows replaces "load everything, then one query per row". Two measured indexes. Score is the rounded mean of four sections or an explicit "Not scored yet". | A replay of the inherited behaviour took **94.5 s and 300,001 queries** for a 300k-row company; the new page takes **23 ms and 2 queries**. |
 | **Task 3** | `Status` is the single definition; aliases are mapped and unknown values rejected on save. The backfill is guarded, batched, resumable and reversible, and **was not run**. | A test proves the SQL mapping agrees with the Ruby one on awkward input; the plan and rollback are in §6. |
 
+Two small enhancements follow from the tasks rather than from the extras: an **audit trail on exports** (who requested each one, how often it was fetched, §4.6) and a **legacy-data note** on the dashboard (how much of the history is still non-standard, at no extra query, §5.6). §1.1 explains the approach to a ten-year-old application that ties the work together.
+
 Things I deliberately did **not** do: rewrite the module, add a second UI framework, or run the historical backfill
 (the brief says *plan only*).
+
+### 1.1 How I approached a ten-year-old application
+
+A legacy app is not a blank page. It earns money, it holds data nobody fully understands, and the people who wrote it have gone. So the question for each change was not "what is the best design?" but **"what is the smallest change that fixes the cause, that I can prove did not break anything, and that can be undone?"** The rules I followed, each with the place it shows up here:
+
+| Rule | What it means in practice | Where |
+|---|---|---|
+| **Treat the symptoms as the specification** | I had no legacy code, so I rebuilt the behaviour the brief describes (load every row, one employee query per row, score in Ruby) and measured *that* as "before" | §5.1, `Perf.legacy_page` |
+| **Fix the cause, not the symptom** | "Slow" was an unbounded N+1, not a missing cache; "wrong score" was the absence of one rule, not a formatting bug | §5.2, §5.4 |
+| **One definition per rule** | The status mapping lives in `Status` and the score in `ScoreCalculator`. The page, the filters, the export, the backfill and the release-plan tester all call them, so the legacy mess is handled once and cannot drift | §6.1 |
+| **Show the legacy data, do not hide it** | The page used to fold odd spellings into the five statuses silently. It now says how many records are still non-standard and what happens to them, so the clean-up is something an admin can watch shrink | §5.6 |
+| **Expand, then contract, for data changes** | Write path first; additive schema (a nullable column, a `NOT VALID` constraint); a batched, reversible backfill; the irreversible step (dropping the old column) last, after 14 stable days | §6 |
+| **Add guardrails that outlive me** | Tests that read the real log, tenant tests that send a rival company id, a query-count test, a test that pins the exact keys a page may expose, and mutation checks proving the tests can fail | §3, §5.5, §11 |
+| **Treat health data as the product's main risk** | The tenant comes from the session; exports are redacted by construction; every export records who requested it and how often it was fetched | §3, §4.2, §4.6 |
+| **Restraint** | No rewrite, no new framework, no new infrastructure. New code is small objects beside the old; anything beyond the brief is flagged | §8 |
+
+**Why this stack suits a legacy application**
+
+- **Ruby on Rails (kept, not replaced).** The brief is about extending a Rails app, and the cheapest change to review is one that follows the conventions the next maintainer already knows. Rails 8's built-ins (Solid Queue for jobs, Solid Cache, Active Storage) mean *no new infrastructure to run*, and in a legacy system every new moving part is risk.
+- **PostgreSQL.** The data already lives there, and its features are what make the data change safe on a live table: `CREATE INDEX CONCURRENTLY`, `CHECK … NOT VALID` then `VALIDATE`, transactional DDL, `jsonb` for the answers, index-only scans for the chip counts.
+- **Inertia.js with React and TypeScript.** It lets the UI be modernised **page by page without a rewrite and without a second API**. Controllers stay the contract: they hand each page its props, and authentication, CSRF, sessions and the tenant rule stay in Rails, in one place. An old server-rendered page and a new React page can live in the same app. I considered a separate React SPA plus a JSON API and rejected it: two deployables, two auth models, CORS and API versioning, and an attack surface in which every endpoint has to re-check the tenant. TypeScript is used where it prevents mistakes, the props contract between server and page, and is strict.
+- **Plain Ruby objects for the domain** (`Status`, `ScoreCalculator`, `AssessmentDashboard`, the export builder). They are small, tested without HTTP, and can be lifted into whatever the app becomes.
 
 ## 2. Requirement traceability
 
@@ -117,6 +141,14 @@ log in production mode; `filter_redirect` now masks it (tested).
 - A file larger than memory is fine to *build*, but the disk service's download is whatever the storage service supports (S3 handles it).
 - Two services to operate instead of zero; accepted for the reasons in §4.1.
 
+### 4.6 Audit trail: who exported the data, and was it fetched
+
+The data is health-related, and "extra care" includes being able to answer an auditor's first two questions. An export already stored the requesting admin (`admin_id`); it now also counts how many times its download link was used and when last (`download_count`, `last_downloaded_at`). The Exports page shows *"Requested by Maya Reyes"* and *"Downloaded 2 times, last 5 min ago"* or *"Not downloaded yet"*. Admins of one company see each other's exports; a retry is attributed to whoever pressed Retry.
+
+- **Small and safe.** Two columns on `assessment_exports` (a small new table, not the large assessments table); a constant default is a metadata-only change in PostgreSQL 11 and later.
+- **Counted only after authorisation.** The download action counts a use once the request is tenant-checked and the file is downloadable, with a single atomic `UPDATE … SET download_count = download_count + 1` (two simultaneous clicks are both counted) that leaves `updated_at` alone, because that column is the build heartbeat. Refused downloads (not ready, expired, another company) are not counted; tests assert it.
+- **Trade-off.** It records *that* a link was used, not *who* used it: the link is authorised per request, so any admin of the company could click it. A per-download audit row (admin, time, IP) is the next step if a regulator needs it.
+
 ## 5. Task 2 — dashboard speed and the score
 
 ### 5.1 What "slow" most plausibly was
@@ -187,6 +219,18 @@ backfill on the big table (which the brief says to avoid). The page reads only t
 Request parameters carrying personal data are filtered (`employee_email`, `responses…`, `free_text`, `answers`, the CAPTCHA, passwords), model attributes are filtered from `inspect` and SQL binds, the dashboard never selects
 the sensitive columns in the first place, and exception messages never reach the log. The tests do not trust the configuration: they capture the real DEBUG log while requests carrying and returning sensitive data run, and assert
 nothing leaks and that harmless fields (`status`, dates) stay visible for debugging. A mutation check confirms they fail when the filters are removed.
+
+### 5.6 Making the legacy data visible
+
+The brief lists the inconsistent statuses as a known problem. Folding them on display (§5.2) made the page consistent, but silently: an admin could not tell that a third of their records were stored in an older spelling, or what happens to a value nobody recognises. A small note under the filters now says it:
+
+> **42 of 64 use a standard status** *(progress bar)* · 17 records use an older spelling (complete, comp, done), shown under its standard status; 4 have no status or "n/a", shown as Pending; 1 has an unrecognised value, shown as Needs follow-up for a person to review. Anything saved from now on is always one of the five.
+
+It appears only when there is something to say (a company with clean data sees nothing), follows the date range like the chips, counts only the signed-in company, and links to the release plan when the ops pages are on. After the backfill runs, the bar fills and the note disappears, so the clean-up becomes something you can watch.
+
+- **No extra query.** The numbers come from the grouped `COUNT` the page already runs; a test asserts the page still makes two assessment queries. The prop is lazy, so opening the drawer does no dashboard work.
+- **It never echoes an unrecognised stored value.** Only spellings from the closed alias list (case and spaces folded) are named; an unknown value is counted, not shown, because nobody knows what ten years of a free column contain. A test stores a sentence in the status and asserts it is absent from the response.
+- **One definition.** `Status.legacy_kind` (`standard`, `blank`, `alias`, `unknown`) sits beside `normalize`, and a test pins the two together.
 
 ## 6. Task 3 — normalizing statuses with a safe release plan
 
@@ -348,7 +392,7 @@ less than it appears to; it is defence in depth, not the lock. If stronger bot r
 - **Local storage in production is unsafe on ephemeral disks**: attach a volume or use S3. S3 is wired (`config/storage.yml`) and exercised offline by `test/s3_storage_test.rb` with the AWS SDK's stubbed client and real signing, but never run against a real bucket. Railway's own Buckets and Cloudflare R2 need a custom endpoint, which is not configurable here.
 - **The CAPTCHA** is the weakest control in the app against a determined attacker, especially with the accessible text alternative; rate limiting (per address and per account) and the generic error carry the weight.
 - **New assessment is not an audit-grade write path.** It does not record who created an assessment, and there is no edit or delete for employees or assessments (an assessment is retired by archiving it). If the product needs those, an audit trail comes first.
-- **Not done:** audit log of exports, per-admin permissions beyond "company admin", self-service sign-up and password reset, admin management, mobile polish beyond a working responsive layout, internationalisation.
+- **Not done:** a per-download audit row (who, when, from where; §4.6 records only the count), per-admin permissions beyond "company admin", self-service sign-up and password reset, admin management, mobile polish beyond a working responsive layout, internationalisation.
 
 ## 10. Build log: the steps and why each was done this way
 
@@ -387,8 +431,9 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 28 | Settings page, not a config file | `173fc1c` | Railway's Settings page showed that Config as Code is unavailable to new services, so a `railway.json` is not read; the README now says the Settings page is the configuration |
 | 29 | Demo accounts sign-in | `5ec4d29` | the first sign-in on the hosted copy failed: tolerant `ALLOW_DEMO_SEED`, demo passwords that follow `DEMO_ADMIN_PASSWORD`, no password in the log |
 | 30 | S3 proven offline | `9fbb60b` | `AWS_*` variables were documented but the S3 service had never run; stubbed-client tests with real signing, and an honest `.env.example` |
-
-After step 30 I trimmed the repository to what the brief asks for (`README.md` and `SOLUTION.md`; other notes are ignored by Git), removed the unused Kamal scaffolding and the Railway config file Railway does not read, and fixed a CI job that ran zero system tests and so always failed.
+| 31 | Repository trimmed to the brief | `0334fda` | README and SOLUTION only (other notes are ignored by Git); removed the unused Kamal scaffolding and a `railway.json` Railway does not read; removed a CI job that ran zero system tests and so always failed |
+| 32 | Export audit trail | `f6d19d1` | who requested each export and how often it was downloaded (§4.6); six tests and a mutation check |
+| 33 | Legacy data note | `98fb6cf` | the dashboard says how much of the data is still non-standard, at no query cost (§5.6); seven tests and two mutation checks |
 
 **Defects found by testing, not by reading — all fixed** (the second batch came from the independent review, §12): the design's index not helping the page; a `TimeBudgetExceeded` constant that would have raised `NameError` in the job's `rescue` in production (Zeitwerk); Rails' loose boolean cast
 granting cookie consent for `"yes please"`; the preview endpoint losing its date error to `valid?`; a half-applied migration that could not be reversed; a parallel test race on a cold Vite build; npm and Ruby warnings; a dev-only redirect that also ran in
@@ -396,7 +441,7 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 274 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 287 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser against the design's screenshots; production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 

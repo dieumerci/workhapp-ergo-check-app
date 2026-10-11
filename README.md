@@ -10,8 +10,11 @@ old Rails app, without rewrites:
 | **2. A faster dashboard with a correct score** | Server-side filtering and paging, two measured indexes, one grouped count instead of N+1 queries. Score is always the rounded average of four section scores, or an honest "Not scored yet". |
 | **3. Status normalization** | New and updated records only ever hold `pending`, `in_progress`, `completed`, `needs_follow_up` or `archived`. The historical backfill is **designed, tested and guarded, but not executed**. |
 
+Two enhancements follow directly from those tasks: an **export audit trail** (who requested each export, how often it was
+downloaded) and a **legacy-data note** on the dashboard (how much of the history still uses old status spellings, shown instead of hidden).
 Plus three extras beyond the brief: a **self-hosted CAPTCHA** on sign-in, a **cookie-consent** feature, and a small
-**New assessment** form so the app can be explored end to end.
+**New assessment** form so the app can be explored end to end. How I approached a ten-year-old application, and why Rails,
+PostgreSQL and Inertia suit it, is in `SOLUTION.md` §1.1.
 
 **Design, measurements and the release and rollback plan:** [`SOLUTION.md`](SOLUTION.md).
 
@@ -41,6 +44,8 @@ After `bin/rails db:setup` (or `bin/rails db:seed`) these four company admins ex
 image. If you cannot read it, click *Can't see the image? Use a text question instead* and answer the sum (for example "What is 36 minus 25?").
 A wrong code is rejected even with the right password, and every challenge works once.
 
+**Who sees what:** Maya and Daniel are two admins of **Northwind** and see the same 64 assessments (a deliberately messy, legacy-spelled data set, so the legacy note shows); Jonas is the only admin of **Harbor & Pine** and sees 24 clean ones (no note); Aisha sees Summit Physio's 40 (messy again). Exports are shared inside a company, so Daniel sees an export Maya requested, with her name on it.
+
 **What to try:** sign in as Maya and as Jonas in turn and see two different datasets (the page says *Showing your company only*; the
 company comes from your session, never from a parameter). Then use the dashboard, open a row, change its status, press **New assessment**, and export a CSV.
 The [demo script](#demo-script-510-minutes) below is a ready-made tour.
@@ -56,7 +61,8 @@ The [demo script](#demo-script-510-minutes) below is a ready-made tour.
 | Change status | From the drawer. Aliases such as `comp` are normalized, unknown values are rejected, and the counts and score update immediately |
 | **New assessment** | Pick one of your employees or add one, choose a status, optionally enter the four section scores. Saved to your company only |
 | CSV export | Live match count, background build with real progress, ready / failed / expired states, retry, one-minute signed download. Six columns, no personal data |
-| Exports page | History of the company's exports and their state |
+| Exports page | History of the company's exports and their state, who requested each one, and how often it was downloaded |
+| Legacy-data note | Under the filters: "42 of 64 use a standard status" with a progress bar, which older spellings were found and how they are shown. Hidden when the data is clean |
 | Cookies | Consent banner, *Cookie settings*, an optional cookie only after opt-in |
 | Release plan and Safeguards | Internal pages: the status mapping with a live tester, the eight release steps, and the log-filtering proof |
 
@@ -108,7 +114,7 @@ In development, background jobs run in-process, so exports finish without a sepa
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 274 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 287 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -341,12 +347,12 @@ An export is a CSV written through Active Storage. A Railway container's disk is
 ## Demo script (5–10 minutes)
 
 1. **Tenancy (1 min).** Sign in as Northwind (Maya): header says "Showing your company only". Sign out, sign in as Harbor & Pine (Jonas):
-   a different, smaller dataset. Mention the session, not a parameter, decides the company.
-2. **Dashboard (2 min).** Chips with counts, presets, From/To, paging; open a row (the URL carries `?selected=`),
-   change its status, watch the toast, the chip counts and the score react. Show a "Not scored yet" row and why.
+   a different, smaller, clean dataset with no legacy note. Mention the session, not a parameter, decides the company.
+2. **Dashboard (2 min).** Chips with counts, presets, From/To, paging; point at the legacy note ("42 of 64 use a standard status");
+   open a row (the URL carries `?selected=`), change its status, watch the toast, the chip counts and the score react. Show a "Not scored yet" row and why.
 3. **New assessment (1 min).** Press *New assessment*, add an employee, choose *Completed*, enter four scores, create it, and see the score the dashboard computes.
 4. **Export (3 min).** Export CSV from a filtered view: locked company, live match count, six columns, "Left out".
-   Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry).
+   Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry), who requested each export and how often it was downloaded.
 5. **Performance (1–2 min).** `bin/rails perf:benchmark` output, and the EXPLAIN difference between the design's index and the one shipped.
 6. **Status plan (2 min).** Release plan page: type `comp`, `n/a`, `xyz` in the tester; walk the eight steps and which are live vs window;
    `bin/rails status:backfill:report`.
