@@ -19,6 +19,7 @@ class AssessmentsController < InertiaController
       filters: filters.to_h,
       assessments: -> { result.call.rows.map(&:to_list) },
       counts: -> { result.call.counts },
+      legacy: -> { result.call.legacy&.to_h },
       pagination: -> {
         { page: result.call.page, pages: result.call.pages, total: result.call.total, per_page: AssessmentDashboard::PER_PAGE }
       },

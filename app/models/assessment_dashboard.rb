@@ -62,7 +62,15 @@ class AssessmentDashboard
     end
   end
 
-  Result = Struct.new(:rows, :counts, :total, :page, :pages, keyword_init: true)
+  Result = Struct.new(:rows, :counts, :total, :page, :pages, :legacy, keyword_init: true)
+
+  # How many records in the date range still hold a pre-standard status, read
+  # from the grouped counts the page already fetched (no extra query). nil when
+  # everything is standard. Only spellings from the closed alias list are ever
+  # named; an unrecognised value is counted, never echoed, because nobody knows
+  # what ten years of free text put in that column.
+  Legacy = Struct.new(:records, :standard, :aliases, :blank, :unknown, :spellings, keyword_init: true)
+  SPELLINGS_SHOWN = 4
 
   def initialize(company:, filters:)
     @company = company
@@ -76,7 +84,8 @@ class AssessmentDashboard
     pages = [ (total / PER_PAGE.to_f).ceil, 1 ].max
     page = [ @filters.page, pages ].min
 
-    Result.new(rows: rows_for(page, raw_counts), counts: counts, total: total, page: page, pages: pages)
+    Result.new(rows: rows_for(page, raw_counts), counts: counts, total: total, page: page, pages: pages,
+               legacy: legacy_summary(raw_counts))
   end
 
   private
@@ -92,6 +101,23 @@ class AssessmentDashboard
     canonical = Status::CANONICAL.index_with(0)
     raw_counts.each { |raw, count| canonical[Status.classify(raw)] += count }
     canonical.merge("all" => canonical.values.sum)
+  end
+
+  def legacy_summary(raw_counts)
+    tally = Hash.new(0)
+    spellings = Hash.new(0)
+    raw_counts.each do |raw, count|
+      kind = Status.legacy_kind(raw)
+      tally[kind] += count
+      spellings[raw.to_s.strip.downcase] += count if kind == :alias
+    end
+    records = tally[:alias] + tally[:blank] + tally[:unknown]
+    return if records.zero?
+
+    Legacy.new(
+      records: records, standard: tally[:standard], aliases: tally[:alias], blank: tally[:blank], unknown: tally[:unknown],
+      spellings: spellings.sort_by { |name, count| [ -count, name ] }.first(SPELLINGS_SHOWN).map(&:first)
+    )
   end
 
   def rows_for(page, raw_counts)

@@ -3,6 +3,7 @@ import { Head, router, usePage } from '@inertiajs/react'
 import AssessmentTable from '@/components/assessments/AssessmentTable'
 import DetailDrawer from '@/components/assessments/DetailDrawer'
 import FilterBar from '@/components/assessments/FilterBar'
+import LegacyDataNote from '@/components/assessments/LegacyDataNote'
 import NewAssessmentDialog from '@/components/assessments/NewAssessmentDialog'
 import Pager from '@/components/assessments/Pager'
 import { DownloadIcon, PlusIcon } from '@/components/Icons'
@@ -26,7 +27,7 @@ function buildQuery(filters: Filters, page = 1): Query {
 // Wait a beat before showing the skeleton so fast responses don't flash it.
 const SKELETON_DELAY_MS = 150
 
-export default function Index({ filters, assessments, counts, pagination, selected, employees }: AssessmentsIndexProps) {
+export default function Index({ filters, assessments, counts, legacy, pagination, selected, employees }: AssessmentsIndexProps) {
   const { status_options } = usePage().props
   const { openExport } = useExports()
   const [loading, setLoading] = useState(false)
@@ -109,6 +110,7 @@ export default function Index({ filters, assessments, counts, pagination, select
             onChange={visit}
             onClear={clear}
           />
+          {legacy && <LegacyDataNote legacy={legacy} />}
           <AssessmentTable rows={assessments} loading={loading} onOpen={openDetail} onClear={clear} />
           <Pager pagination={pagination} onPage={(page) => visit({}, page)} />
         </div>

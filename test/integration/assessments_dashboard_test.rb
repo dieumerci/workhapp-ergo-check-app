@@ -100,6 +100,69 @@ class AssessmentsDashboardTest < ActionDispatch::IntegrationTest
     assert_equal 2, rows.size, "an unknown legacy status shows up under needs follow-up, not nowhere"
   end
 
+  # ---- the data-tidiness note ---------------------------------------------
+
+  test "a company with legacy statuses is told how many, and which spellings, without an extra query" do
+    [ "completed", "pending", "in_progress" ].each { |raw| create_legacy_assessment(company: @company, status: raw) }
+    [ "comp", "comp", "done", "Complete " ].each { |raw| create_legacy_assessment(company: @company, status: raw) }
+    [ nil, "", "n/a" ].each { |raw| create_legacy_assessment(company: @company, status: raw) }
+    create_legacy_assessment(company: @company, status: "on hold")
+    sign_in_as(@admin)
+
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?(%("assessments")) && payload[:name] != "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { visit }
+
+    legacy = props[:legacy]
+    assert_equal({ "records" => 8, "standard" => 3, "aliases" => 4, "blank" => 3, "unknown" => 1 }, legacy.slice(:records, :standard, :aliases, :blank, :unknown).to_h)
+    assert_equal %w[comp complete done], legacy[:spellings], "most common first, then alphabetical; case and spaces folded"
+    assert_equal 2, queries.size, "the note must come from the counts the page already fetches"
+  end
+
+  test "a company whose statuses are all standard gets no note" do
+    %w[completed pending archived].each { |raw| create_legacy_assessment(company: @other_company, status: raw) }
+    create_legacy_assessment(company: @company, status: "comp")
+    sign_in_as(@other_admin)
+
+    visit
+
+    assert_nil props[:legacy]
+  end
+
+  test "an unrecognised value is counted but never shown" do
+    create_legacy_assessment(company: @company, status: "SECRET diagnosis: lower back")
+    sign_in_as(@admin)
+
+    visit
+
+    assert_equal 1, props[:legacy][:unknown]
+    assert_empty props[:legacy][:spellings]
+    assert_not_includes inertia.props.to_json, "SECRET diagnosis"
+  end
+
+  test "the note counts only this company and follows the date range" do
+    create_legacy_assessment(company: @company, status: "done", created_at: 200.days.ago)
+    create_legacy_assessment(company: @company, status: "completed", created_at: 2.days.ago)
+    create_legacy_assessment(company: @other_company, status: "comp", created_at: 2.days.ago)
+    sign_in_as(@admin)
+
+    visit
+    assert_equal 1, props[:legacy][:records]
+
+    visit preset: "30"
+    assert_nil props[:legacy], "the only legacy row is older than 30 days"
+  end
+
+  test "the note is not computed when only the drawer is opened" do
+    assessment = create_legacy_assessment(company: @company, status: "comp")
+    sign_in_as(@admin)
+
+    get assessments_path, params: { selected: assessment.id }, headers: partial_headers("selected")
+
+    assert_nil props[:legacy]
+    assert_equal assessment.id, props[:selected][:id]
+  end
+
   test "an unknown status value in the URL means no status filter" do
     create_legacy_assessment(company: @company, status: "completed")
     sign_in_as(@admin)

@@ -35,4 +35,17 @@ class StatusTest < ActiveSupport::TestCase
     assert_not Status.scored?("pending")
     assert_not Status.scored?("in_progress")
   end
+
+  test "legacy_kind says how far a stored value is from the standard" do
+    Status::CANONICAL.each { |value| assert_equal :standard, Status.legacy_kind(value) }
+    [ nil, "", "  ", "n/a", " N/A ", "nil", "null" ].each { |raw| assert_equal :blank, Status.legacy_kind(raw), raw.inspect }
+    [ "comp", "done", "complete", "Completed ", " DONE ", "Pending" ].each { |raw| assert_equal :alias, Status.legacy_kind(raw), raw.inspect }
+    [ "on hold", "finished", "xyz", "in progress" ].each { |raw| assert_equal :unknown, Status.legacy_kind(raw), raw.inspect }
+  end
+
+  test "legacy_kind agrees with normalize about what is recognised" do
+    [ nil, "", "n/a", "comp", "Done", "on hold", "xyz", "archived" ].each do |raw|
+      assert_equal Status.known?(raw), Status.legacy_kind(raw) != :unknown, raw.inspect
+    end
+  end
 end

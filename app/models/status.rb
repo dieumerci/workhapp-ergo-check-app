@@ -33,6 +33,9 @@ module Status
     "" => PENDING
   }.freeze
 
+  # The ALIASES that mean "not started": nil, "", "n/a", "nil", "null".
+  NOT_STARTED_SPELLINGS = ALIASES.select { |_, canonical| canonical == PENDING }.keys.freeze
+
   # Where a value that matches nothing lands during backfill and in read-only
   # views. Never guessed as "completed": a human reviews these rows.
   UNKNOWN_TARGET = NEEDS_FOLLOW_UP
@@ -63,6 +66,18 @@ module Status
   # nil and "") with a plain IN list, so the index can still be used.
   def matching(raw_values, canonical)
     raw_values.select { |raw| classify(raw) == canonical }
+  end
+
+  # How far a stored value is from the standard, for the data-tidiness note:
+  #   :standard  already exactly one of the five
+  #   :blank     nil, "", "n/a"...: shown as Pending
+  #   :alias     a known spelling or case variant ("comp", " DONE "): shown under its standard status
+  #   :unknown   matches nothing: shown as Needs follow-up for a person to review
+  def legacy_kind(raw)
+    return :standard if CANONICAL.include?(raw)
+    return :blank if raw.nil? || NOT_STARTED_SPELLINGS.include?(raw.to_s.strip.downcase)
+
+    normalize(raw) ? :alias : :unknown
   end
 
   def known?(raw)
