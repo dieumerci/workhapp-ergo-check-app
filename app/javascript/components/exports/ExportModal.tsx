@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, router, usePage } from '@inertiajs/react'
 import Dialog from '@/components/Dialog'
-import { CloseIcon, LockIcon } from '@/components/Icons'
+import { DownloadIcon } from '@/components/Icons'
+import { CompanyLock, Notice, SheetHeader } from '@/components/ui'
 import ProgressBar from '@/components/exports/ProgressBar'
 import { formatRange } from '@/lib/format'
 import { cx } from '@/lib/cx'
@@ -17,12 +18,6 @@ type Props = {
 
 type Match = { loading: boolean; count: number; error: string | null }
 
-const labelClass = 'flex flex-col gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase'
-const controlClass =
-  'rounded-[9px] border border-control bg-white px-2.5 py-[9px] text-sm font-normal tracking-normal text-ink normal-case'
-const ghostButton = 'rounded-[9px] border border-control bg-white px-3.5 py-[9px] font-semibold hover:bg-hover'
-const primaryButton = 'rounded-[9px] bg-brand px-4 py-[9px] font-semibold text-white hover:bg-brand-dark'
-
 export default function ExportModal({ open, jobId, initial, onJob, onClose }: Props) {
   const { exports } = usePage().props
   const job = jobId === null ? undefined : exports.find((candidate) => candidate.id === jobId)
@@ -35,7 +30,7 @@ export default function ExportModal({ open, jobId, initial, onJob, onClose }: Pr
 }
 
 function FormView({ initial, onJob, onClose }: { initial: ExportFilters; onJob: (id: number) => void; onClose: () => void }) {
-  const { auth, status_options, export_columns, errors } = usePage().props
+  const { status_options, export_columns, errors } = usePage().props
   const [filters, setFilters] = useState(initial)
   const [match, setMatch] = useState<Match>({ loading: true, count: 0, error: null })
   const [submitting, setSubmitting] = useState(false)
@@ -94,40 +89,25 @@ function FormView({ initial, onJob, onClose }: { initial: ExportFilters; onJob: 
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 id="export-title" className="text-xl font-bold tracking-tight">
-            Export assessments
-          </h2>
-          <div className="mt-0.5 text-muted">Choose a date range and status. Everything else is fixed.</div>
-        </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 flex-none place-items-center rounded-lg bg-canvas hover:bg-hover">
-          <CloseIcon size={14} />
-        </button>
-      </div>
+    <div className="flex flex-col gap-6">
+      <SheetHeader id="export-title" title="Export assessments" subtitle="Choose a date range and status. Everything else is fixed." onClose={onClose} />
 
-      <div className="flex items-center gap-2.5 rounded-[10px] bg-brand-tint px-3 py-2.5 text-[13px] text-brand-dark">
-        <LockIcon size={15} className="flex-none" />
-        <div>
-          <strong>{auth.company?.name}</strong> only — set by your account, not editable.
-        </div>
-      </div>
+      <CompanyLock />
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className={labelClass}>
-          From
-          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(event) => setFilters({ ...filters, from: event.target.value })} className={controlClass} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="field">
+          <span className="eyebrow">From</span>
+          <input type="date" value={filters.from} max={filters.to || undefined} onChange={(event) => setFilters({ ...filters, from: event.target.value })} className="input" />
         </label>
-        <label className={labelClass}>
-          To
-          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(event) => setFilters({ ...filters, to: event.target.value })} className={controlClass} />
+        <label className="field">
+          <span className="eyebrow">To</span>
+          <input type="date" value={filters.to} min={filters.from || undefined} onChange={(event) => setFilters({ ...filters, to: event.target.value })} className="input" />
         </label>
       </div>
 
-      <label className={labelClass}>
-        Status
-        <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value as ExportFilters['status'] })} className={controlClass}>
+      <label className="field">
+        <span className="eyebrow">Status</span>
+        <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value as ExportFilters['status'] })} className="input">
           <option value="all">All statuses</option>
           {status_options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -135,13 +115,14 @@ function FormView({ initial, onJob, onClose }: { initial: ExportFilters; onJob: 
             </option>
           ))}
         </select>
+        <span className="text-[12.5px] text-muted">An export uses exactly these two filters. A search on the page is not part of it.</span>
       </label>
 
-      <div className="flex flex-col gap-2.5 rounded-xl border border-line p-3.5">
-        <div className="text-[13px] font-semibold">What&apos;s in the file</div>
+      <div className="flex flex-col gap-3 border-l-[3px] border-ok-dot/60 pl-4">
+        <div className="eyebrow !text-ok">What&apos;s in the file</div>
         <div className="flex flex-wrap gap-1.5">
           {export_columns.map((column) => (
-            <span key={column} className="rounded-[5px] bg-ok-tint px-[7px] py-0.5 font-mono text-xs text-ok">
+            <span key={column} className="rounded-md bg-ok-tint px-2 py-0.5 font-mono text-xs text-ok">
               {column}
             </span>
           ))}
@@ -153,22 +134,22 @@ function FormView({ initial, onJob, onClose }: { initial: ExportFilters; onJob: 
       </div>
 
       {errors.export && (
-        <div role="alert" className="rounded-[10px] bg-danger-tint px-3 py-2.5 text-[13px] font-medium text-danger">
+        <Notice tone="danger" role="alert">
           {errors.export.map((problem) => (
             <div key={problem}>{problem}</div>
           ))}
-        </div>
+        </Notice>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="status" className={cx('font-semibold', ok ? 'text-ok' : match.loading && !backwards ? 'text-muted' : 'text-danger')}>
           {message}
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={onClose} className={ghostButton}>
+        <div className="flex gap-2.5">
+          <button type="button" onClick={onClose} className="btn btn-quiet">
             Cancel
           </button>
-          <button type="button" onClick={request} disabled={!ok || submitting} className={cx(primaryButton, (!ok || submitting) && 'opacity-40')}>
+          <button type="button" onClick={request} disabled={!ok || submitting} className="btn btn-primary">
             {submitting ? 'Requesting…' : 'Request export'}
           </button>
         </div>
@@ -182,23 +163,11 @@ function JobView({ job, onClose }: { job: ExportView; onClose: () => void }) {
   const title = job.state === 'ready' ? 'Export ready' : job.state === 'failed' ? 'Export failed' : job.state === 'expired' ? 'Export expired' : 'Preparing your export'
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 id="export-title" className="text-xl font-bold tracking-tight">
-            {title}
-          </h2>
-          <div className="mt-0.5 text-muted">
-            {formatRange(job.from, job.to)} · {job.status_label}
-          </div>
-        </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 flex-none place-items-center rounded-lg bg-canvas hover:bg-hover">
-          <CloseIcon size={14} />
-        </button>
-      </div>
+    <div className="flex flex-col gap-6">
+      <SheetHeader id="export-title" title={title} subtitle={`${formatRange(job.from, job.to)} · ${job.status_label}`} onClose={onClose} />
 
       {running && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           <ProgressBar value={job.progress} label="Export progress" thick />
           <div role="status" className="text-[13px] text-muted">
             {job.state_label}… You can close this and keep working — we&apos;ll let you know when it&apos;s ready.
@@ -207,27 +176,26 @@ function JobView({ job, onClose }: { job: ExportView; onClose: () => void }) {
       )}
 
       {job.state === 'ready' && (
-        <div role="status" className="rounded-[10px] bg-ok-tint px-3.5 py-3 font-semibold text-ok">
-          {job.row_count} rows ready. Link valid for 24 hours.
-        </div>
+        <Notice tone="ok" role="status">
+          <span className="font-semibold">{job.row_count} rows ready.</span> Link valid for 24 hours.
+        </Notice>
       )}
 
       {job.error && (
-        <div role="alert" className="rounded-[10px] bg-danger-tint px-3.5 py-3 text-[13px] font-medium text-danger">
+        <Notice tone="danger" role="alert">
           {job.error}
-        </div>
+        </Notice>
       )}
 
-      {job.state === 'expired' && (
-        <div className="rounded-[10px] bg-canvas px-3.5 py-3 text-[13px] text-muted">The 24-hour download link has expired. Request the export again.</div>
-      )}
+      {job.state === 'expired' && <Notice tone="neutral">The 24-hour download link has expired. Request the export again.</Notice>}
 
-      <div className="flex justify-end gap-2">
-        <Link href="/exports" onClick={onClose} className={ghostButton}>
+      <div className="flex justify-end gap-2.5">
+        <Link href="/exports" onClick={onClose} className="btn btn-quiet">
           View all exports
         </Link>
         {job.download_path && (
-          <a href={job.download_path} className={primaryButton}>
+          <a href={job.download_path} className="btn btn-primary">
+            <DownloadIcon size={15} />
             Download CSV
           </a>
         )}

@@ -6,8 +6,10 @@ import FilterBar from '@/components/assessments/FilterBar'
 import LegacyDataNote from '@/components/assessments/LegacyDataNote'
 import NewAssessmentDialog from '@/components/assessments/NewAssessmentDialog'
 import Pager from '@/components/assessments/Pager'
+import StatusSpectrum from '@/components/assessments/StatusSpectrum'
 import { DownloadIcon, PlusIcon } from '@/components/Icons'
 import { useExports } from '@/components/exports/ExportProvider'
+import { PageHeader } from '@/components/ui'
 import type { AssessmentRow, AssessmentsIndexProps, Filters } from '@/types/assessments'
 
 type Query = Record<string, string | number>
@@ -76,33 +78,34 @@ export default function Index({ filters, assessments, counts, legacy, pagination
   return (
     <>
       <Head title="Assessments" />
-      <section className="flex flex-col gap-[18px]">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold tracking-tight">Assessments</h1>
-            <div className="mt-0.5 text-muted">Ergonomic and health assessments for your employees.</div>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              type="button"
-              onClick={openNew}
-              className="inline-flex items-center gap-2 rounded-[9px] border border-control bg-white px-4 py-2.5 text-sm font-semibold hover:bg-hover"
-            >
-              <PlusIcon size={15} />
-              New assessment
-            </button>
-            <button
-              type="button"
-              onClick={() => openExport({ from: filters.from, to: filters.to, status: filters.status })}
-              className="inline-flex items-center gap-2 rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
-            >
-              <DownloadIcon size={15} />
-              Export CSV
-            </button>
-          </div>
-        </div>
+      <section className="flex flex-col gap-8">
+        <PageHeader
+          title="Assessments"
+          lead="Ergonomic and health assessments for your employees. Search them, filter them, and export them without personal identifiers."
+          actions={
+            <>
+              <button type="button" onClick={openNew} className="btn btn-quiet">
+                <PlusIcon size={15} />
+                New assessment
+              </button>
+              <button type="button" onClick={() => openExport({ from: filters.from, to: filters.to, status: filters.status })} className="btn btn-primary">
+                <DownloadIcon size={15} />
+                Export CSV
+              </button>
+            </>
+          }
+        />
 
-        <div className="overflow-hidden rounded-[14px] border border-line bg-white">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-baseline gap-3">
+              <div className="display text-[56px] leading-none tabular-nums" aria-hidden="true">
+                {counts.all}
+              </div>
+              <div className="text-[15px] text-muted">{counts.all === 1 ? 'assessment' : 'assessments'} in this view</div>
+            </div>
+            <StatusSpectrum counts={counts} statusOptions={status_options} />
+          </div>
           <FilterBar
             filters={filters}
             counts={counts}
@@ -111,7 +114,11 @@ export default function Index({ filters, assessments, counts, legacy, pagination
             onChange={visit}
             onClear={clear}
           />
-          {legacy && <LegacyDataNote legacy={legacy} />}
+        </div>
+
+        {legacy && <LegacyDataNote legacy={legacy} />}
+
+        <div className="flex flex-col gap-3">
           <AssessmentTable rows={assessments} search={filters.q} loading={loading} onOpen={openDetail} onClear={clear} />
           <Pager pagination={pagination} onPage={(page) => visit({}, page)} />
         </div>

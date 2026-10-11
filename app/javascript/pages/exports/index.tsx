@@ -3,10 +3,9 @@ import { DownloadIcon } from '@/components/Icons'
 import ProgressBar from '@/components/exports/ProgressBar'
 import StateBadge from '@/components/exports/StateBadge'
 import { useExports } from '@/components/exports/ExportProvider'
+import { PageHeader } from '@/components/ui'
 import { formatDownloads, formatRange, formatRequested } from '@/lib/format'
 import type { ExportView } from '@/types/exports'
-
-const GRID = 'grid grid-cols-[minmax(0,1.6fr)_150px_minmax(120px,1fr)_150px] items-center gap-4'
 
 export default function Index() {
   const { exports, auth } = usePage().props
@@ -23,42 +22,41 @@ export default function Index() {
   return (
     <>
       <Head title="Exports" />
-      <section className="flex flex-col gap-[18px]">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold tracking-tight">Exports</h1>
-            <div className="mt-0.5 text-muted">
-              CSV files are built in the background. Personal identifiers and free-text answers are never included.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => openExport()}
-            className="inline-flex items-center gap-2 rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
-          >
-            New export
-          </button>
-        </div>
+      <section className="flex flex-col gap-8">
+        <PageHeader
+          title="Exports"
+          lead="CSV files are built in the background. Personal identifiers and free-text answers are never included."
+          actions={
+            <button type="button" onClick={() => openExport()} className="btn btn-primary">
+              <DownloadIcon size={15} />
+              New export
+            </button>
+          }
+        />
 
-        <div className="overflow-hidden rounded-[14px] border border-line bg-white">
+        <div className="divide-y divide-line-soft border-y border-line-soft">
           {exports.length === 0 && (
-            <div className="px-4 py-14 text-center text-muted">
-              <div className="text-[15px] font-semibold text-ink">No exports yet</div>
-              <div className="mt-1">Request one to get a CSV of your company&apos;s assessments.</div>
+            <div className="flex flex-col items-center px-4 py-16 text-center">
+              <div className="grid size-12 place-items-center rounded-full bg-brand-tint text-brand-ink">
+                <DownloadIcon size={20} />
+              </div>
+              <div className="display mt-4 text-[26px]">No exports yet</div>
+              <div className="mt-1.5 max-w-[44ch] text-muted">Request one to get a CSV of your company&apos;s assessments, with no names or e-mail addresses in it.</div>
+              <button type="button" onClick={() => openExport()} className="btn btn-quiet mt-5">
+                New export
+              </button>
             </div>
           )}
 
           {exports.map((job) => (
-            <div key={job.id} className={`${GRID} border-b border-line-soft p-4 last:border-b-0`}>
+            <div key={job.id} className="grid items-center gap-x-6 gap-y-3 px-4 py-5 md:grid-cols-[minmax(0,1.7fr)_150px_minmax(120px,1fr)_150px]">
               <div className="min-w-0">
-                <div className="font-semibold">{formatRange(job.from, job.to)}</div>
-                <div className="mt-0.5 text-[13px] text-muted">
+                <div className="text-[16px] font-semibold">{formatRange(job.from, job.to)}</div>
+                <div className="mt-1 text-[13px] text-muted">
                   {job.status_label} · Requested {formatRequested(job.requested_at)} by {job.requested_by}
                 </div>
-                {job.state === 'ready' && (
-                  <div className="mt-0.5 text-[13px] text-muted">{formatDownloads(job.download_count, job.last_downloaded_at)}</div>
-                )}
-                {job.error && <div className="mt-1 text-[13px] text-danger">{job.error}</div>}
+                {job.state === 'ready' && <div className="mt-0.5 text-[13px] text-muted">{formatDownloads(job.download_count, job.last_downloaded_at)}</div>}
+                {job.error && <div className="mt-1.5 text-[13px] font-medium text-danger">{job.error}</div>}
               </div>
               <div>
                 <StateBadge state={job.state} label={job.state_label} />
@@ -67,22 +65,15 @@ export default function Index() {
                 {(job.state === 'queued' || job.state === 'processing') && <ProgressBar value={job.progress} label="Export progress" />}
                 {job.state === 'ready' && <span className="tabular-nums text-muted">{job.row_count} rows</span>}
               </div>
-              <div className="text-right">
+              <div className="md:text-right">
                 {job.download_path && (
-                  <a
-                    href={job.download_path}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-white px-3 py-1.5 text-[13px] font-semibold text-brand hover:bg-brand-tint"
-                  >
+                  <a href={job.download_path} className="btn btn-quiet btn-sm">
                     <DownloadIcon size={13} />
                     Download CSV
                   </a>
                 )}
                 {job.can_retry && (
-                  <button
-                    type="button"
-                    onClick={() => retry(job)}
-                    className="rounded-lg border border-control bg-white px-3 py-1.5 text-[13px] font-semibold hover:bg-canvas"
-                  >
+                  <button type="button" onClick={() => retry(job)} className="btn btn-quiet btn-sm">
                     Retry
                   </button>
                 )}
@@ -91,7 +82,7 @@ export default function Index() {
           ))}
         </div>
 
-        <div className="text-[13px] text-muted">
+        <div className="max-w-[70ch] text-[13px] text-muted">
           Download links stay valid for 24 hours. Exports are limited to {auth.company?.name}, taken from your signed-in account.
           Every export records who requested it and how often it was downloaded, so you can see where this data went.
         </div>

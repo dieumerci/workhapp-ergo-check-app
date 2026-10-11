@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import Dialog from '@/components/Dialog'
-import { CloseIcon } from '@/components/Icons'
+import { SheetHeader } from '@/components/ui'
 import { clearPreferenceStorage } from '@/lib/preferenceStorage'
 
 type Choice = { preferences: boolean }
@@ -29,33 +29,21 @@ export function CookieBanner({ onCustomize }: { onCustomize: () => void }) {
   return (
     <section
       aria-label="Cookie notice"
-      className="fixed bottom-4 left-4 z-25 w-[min(420px,calc(100vw-32px))] animate-pop-in rounded-2xl border border-line bg-white p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
+      className="glass fixed inset-x-4 bottom-[88px] z-25 animate-pop-in rounded-[24px] p-5 md:right-auto md:bottom-5 md:left-5 md:w-[420px]"
     >
-      <h2 className="text-[15px] font-bold">Cookies on ErgoCheck</h2>
-      <p className="mt-1.5 text-[13px] text-ink-2">
+      <h2 className="display text-[24px]">Cookies on ErgoCheck</h2>
+      <p className="mt-2 text-[13.5px] text-ink-2">
         We always use essential cookies to keep you signed in and your account secure. With your OK we also remember
         your dashboard filters. We never use advertising or tracking cookies.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => saveChoice({ preferences: true })}
-          className="rounded-[9px] bg-brand px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-brand-dark"
-        >
+        <button type="button" onClick={() => saveChoice({ preferences: true })} className="btn btn-primary btn-sm">
           Accept all
         </button>
-        <button
-          type="button"
-          onClick={() => saveChoice({ preferences: false })}
-          className="rounded-[9px] border border-control bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-hover"
-        >
+        <button type="button" onClick={() => saveChoice({ preferences: false })} className="btn btn-quiet btn-sm">
           Essential only
         </button>
-        <button
-          type="button"
-          onClick={onCustomize}
-          className="px-1.5 py-2 text-[13px] font-semibold text-brand hover:text-brand-dark"
-        >
+        <button type="button" onClick={onCustomize} className="btn btn-text btn-sm">
           Customize
         </button>
       </div>
@@ -77,71 +65,44 @@ function CookieForm({ initial, onClose }: { initial: boolean; onClose: () => voi
   const [preferences, setPreferences] = useState(initial)
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 id="cookie-dialog-title" className="text-xl font-bold tracking-tight">
-            Cookie settings
-          </h2>
-          <p className="mt-0.5 text-muted">Choose which optional cookies ErgoCheck may use.</p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="grid size-8 place-items-center rounded-lg bg-canvas hover:bg-hover"
-        >
-          <CloseIcon size={14} />
-        </button>
-      </div>
+    <div className="flex flex-col gap-6">
+      <SheetHeader id="cookie-dialog-title" title="Cookie settings" subtitle="Choose which optional cookies ErgoCheck may use." onClose={onClose} />
 
-      <div className="rounded-xl border border-line p-3.5">
+      <section className="flex flex-col gap-3 border-l-[3px] border-brand/50 pl-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[13px] font-semibold">Essential</div>
-          <span className="rounded bg-brand-tint px-2 py-0.5 text-[11px] font-semibold tracking-wide text-brand-dark uppercase">
-            Always on
-          </span>
+          <div className="eyebrow !text-brand-ink">Essential</div>
+          <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-brand-ink uppercase">Always on</span>
         </div>
-        <ul className="mt-2.5 flex flex-col gap-2">
+        <ul className="flex flex-col gap-2.5">
           {ESSENTIAL.map((cookie) => (
             <li key={cookie.name} className="text-[13px] text-muted">
-              <span className="font-mono text-xs text-ink-2">{cookie.name}</span> — {cookie.purpose}{' '}
-              <span className="text-subtle">({cookie.lifetime})</span>
+              <span className="font-mono text-xs text-ink-2">{cookie.name}</span> — {cookie.purpose} <span className="text-subtle">({cookie.lifetime})</span>
             </li>
           ))}
         </ul>
-      </div>
+      </section>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3.5">
+      <label className="flex cursor-pointer items-start gap-4 rounded-2xl border border-line bg-paper/60 p-4 transition-colors hover:border-control">
         <input
           type="checkbox"
           checked={preferences}
           onChange={(event) => setPreferences(event.target.checked)}
-          className="mt-0.5 size-4 rounded border-control text-brand focus:ring-brand"
+          className="mt-0.5 size-5 rounded-md border-control text-brand focus:ring-brand"
         />
         <span>
-          <span className="block text-[13px] font-semibold">Preferences</span>
-          <span className="mt-0.5 block text-[13px] text-muted">
+          <span className="block text-[14px] font-semibold">Preferences</span>
+          <span className="mt-1 block text-[13px] text-muted">
             <span className="font-mono text-xs text-ink-2">ergocheck_prefs</span> — remembers your assessment status
-            filter and date range so the dashboard opens the way you left it.{' '}
-            <span className="text-subtle">(90 days)</span>
+            filter and date range so the dashboard opens the way you left it. <span className="text-subtle">(90 days)</span>
           </span>
         </span>
       </label>
 
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-[9px] border border-control bg-white px-3.5 py-2 font-semibold hover:bg-hover"
-        >
+      <div className="flex justify-end gap-2.5">
+        <button type="button" onClick={onClose} className="btn btn-quiet">
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={() => saveChoice({ preferences }, onClose)}
-          className="rounded-[9px] bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark"
-        >
+        <button type="button" onClick={() => saveChoice({ preferences }, onClose)} className="btn btn-primary">
           Save choices
         </button>
       </div>

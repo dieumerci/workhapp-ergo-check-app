@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import Dialog from '@/components/Dialog'
-import { CloseIcon, LockIcon } from '@/components/Icons'
+import { CompanyLock, Notice, SheetHeader } from '@/components/ui'
 import { cx } from '@/lib/cx'
 import type { StatusValue } from '@/types'
 import type { EmployeeOption } from '@/types/assessments'
@@ -17,12 +17,6 @@ const NEW_EMPLOYEE = 'new'
 const NAME_LIMIT = 120
 const DEPARTMENT_LIMIT = 80
 
-const labelClass = 'flex flex-col gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase'
-const controlClass =
-  'rounded-[9px] border border-control bg-white px-2.5 py-[9px] text-sm font-normal tracking-normal text-ink normal-case disabled:bg-canvas disabled:text-subtle'
-const ghostButton = 'rounded-[9px] border border-control bg-white px-3.5 py-[9px] font-semibold hover:bg-hover'
-const primaryButton = 'rounded-[9px] bg-brand px-4 py-[9px] font-semibold text-white hover:bg-brand-dark'
-
 const isScore = (value: string) => /^\d{1,3}$/.test(value) && Number(value) <= 100
 
 export default function NewAssessmentDialog({ open, employees, onClose }: Props) {
@@ -34,7 +28,7 @@ export default function NewAssessmentDialog({ open, employees, onClose }: Props)
 }
 
 function Form({ employees, onClose }: Omit<Props, 'open'>) {
-  const { auth, status_options, score_sections, errors } = usePage().props
+  const { status_options, score_sections, errors } = usePage().props
   const [employeeId, setEmployeeId] = useState('')
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('')
@@ -78,34 +72,19 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
 
   return (
     <form
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 id="new-assessment-title" className="text-xl font-bold tracking-tight">
-            New assessment
-          </h2>
-          <div className="mt-0.5 text-muted">Record an assessment for one of your employees.</div>
-        </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="grid size-8 flex-none place-items-center rounded-lg bg-canvas hover:bg-hover">
-          <CloseIcon size={14} />
-        </button>
-      </div>
+      <SheetHeader id="new-assessment-title" title="New assessment" subtitle="Record an assessment for one of your employees." onClose={onClose} />
 
-      <div className="flex items-center gap-2.5 rounded-[10px] bg-brand-tint px-3 py-2.5 text-[13px] text-brand-dark">
-        <LockIcon size={15} className="flex-none" />
-        <div>
-          Saved to <strong>{auth.company?.name}</strong> only — set by your account, not editable.
-        </div>
-      </div>
+      <CompanyLock prefix="Saved to" />
 
-      <label className={labelClass}>
-        Employee
-        <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} disabled={employees === undefined} className={controlClass}>
+      <label className="field">
+        <span className="eyebrow">Employee</span>
+        <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} disabled={employees === undefined} className="input">
           <option value="" disabled>
             {employees === undefined ? 'Loading employees…' : 'Choose an employee…'}
           </option>
@@ -120,14 +99,14 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
       </label>
 
       {creating && (
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelClass}>
-            Name
-            <input type="text" value={name} maxLength={NAME_LIMIT} onChange={(event) => setName(event.target.value)} autoComplete="off" className={controlClass} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="field">
+            <span className="eyebrow">Name</span>
+            <input type="text" value={name} maxLength={NAME_LIMIT} onChange={(event) => setName(event.target.value)} autoComplete="off" className="input" />
           </label>
-          <label className={labelClass}>
-            Department
-            <input type="text" value={department} maxLength={DEPARTMENT_LIMIT} list="department-options" onChange={(event) => setDepartment(event.target.value)} autoComplete="off" className={controlClass} />
+          <label className="field">
+            <span className="eyebrow">Department</span>
+            <input type="text" value={department} maxLength={DEPARTMENT_LIMIT} list="department-options" onChange={(event) => setDepartment(event.target.value)} autoComplete="off" className="input" />
             <datalist id="department-options">
               {departments.map((option) => (
                 <option key={option} value={option} />
@@ -137,9 +116,9 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
         </div>
       )}
 
-      <label className={labelClass}>
-        Status
-        <select value={status} onChange={(event) => setStatus(event.target.value as StatusValue)} className={controlClass}>
+      <label className="field">
+        <span className="eyebrow">Status</span>
+        <select value={status} onChange={(event) => setStatus(event.target.value as StatusValue)} className="input">
           {status_options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -148,12 +127,12 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
         </select>
       </label>
 
-      <fieldset className="flex flex-col gap-2.5 rounded-xl border border-line p-3.5" disabled={!scored}>
-        <legend className="px-1 text-[13px] font-semibold">Section scores (0–100)</legend>
-        <div className="grid grid-cols-2 gap-3">
+      <fieldset className="flex flex-col gap-3.5 border-l-[3px] border-line pl-4 disabled:opacity-70" disabled={!scored}>
+        <legend className="eyebrow float-left mb-3.5 w-full">Section scores (0–100)</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
           {score_sections.map((section) => (
-            <label key={section.key} className={labelClass}>
-              {section.label}
+            <label key={section.key} className="field">
+              <span className="text-[13px] font-medium text-ink-2">{section.label}</span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -162,7 +141,7 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
                 step={1}
                 value={scores[section.key] ?? ''}
                 onChange={(event) => setScores({ ...scores, [section.key]: event.target.value })}
-                className={controlClass}
+                className="input tabular-nums"
               />
             </label>
           ))}
@@ -176,18 +155,18 @@ function Form({ employees, onClose }: Omit<Props, 'open'>) {
       </fieldset>
 
       {errors.assessment && (
-        <div role="alert" className="rounded-[10px] bg-danger-tint px-3 py-2.5 text-[13px] font-medium text-danger">
+        <Notice tone="danger" role="alert">
           {errors.assessment.map((problem) => (
             <div key={problem}>{problem}</div>
           ))}
-        </div>
+        </Notice>
       )}
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className={ghostButton}>
+      <div className="flex justify-end gap-2.5">
+        <button type="button" onClick={onClose} className="btn btn-quiet">
           Cancel
         </button>
-        <button type="submit" disabled={!ready || submitting} className={cx(primaryButton, (!ready || submitting) && 'opacity-40')}>
+        <button type="submit" disabled={!ready || submitting} className="btn btn-primary">
           {submitting ? 'Creating…' : 'Create assessment'}
         </button>
       </div>

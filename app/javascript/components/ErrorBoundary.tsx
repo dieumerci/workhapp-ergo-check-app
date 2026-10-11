@@ -21,14 +21,10 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
     if (!this.state.failed) return this.props.children
 
     return (
-      <div role="alert" className="mx-auto mt-16 max-w-[460px] rounded-2xl border border-line bg-white p-6 text-center shadow-sm">
-        <h1 className="text-lg font-bold">Something went wrong</h1>
-        <p className="mt-1.5 text-muted">This page could not be displayed. Your data has not been changed.</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="mt-4 rounded-[9px] bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark"
-        >
+      <div role="alert" className="paper mx-auto mt-16 max-w-[480px] rounded-[28px] p-8 text-center">
+        <h1 className="display text-[30px]">Something went wrong</h1>
+        <p className="mt-2 text-muted">This page could not be displayed. Your data has not been changed.</p>
+        <button type="button" onClick={() => window.location.reload()} className="btn btn-primary mt-6">
           Reload the page
         </button>
       </div>

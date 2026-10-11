@@ -1,5 +1,8 @@
 import { usePage } from '@inertiajs/react'
 import { usePersistedState } from '@/hooks/usePersistedState'
+import { CheckIcon } from '@/components/Icons'
+import ProgressBar from '@/components/exports/ProgressBar'
+import { Section } from '@/components/ui'
 import { RELEASE_STEPS_KEY } from '@/lib/preferenceStorage'
 import { cx } from '@/lib/cx'
 import type { PlanStep } from '@/types/release'
@@ -14,61 +17,46 @@ export default function StepsCard({ steps }: { steps: PlanStep[] }) {
     setDone((current) => (current.includes(index) ? current.filter((item) => item !== index) : [...current, index]))
 
   return (
-    <section className="rounded-[14px] border border-line bg-white px-5 py-[18px]">
-      <div className="mb-1.5 flex items-center justify-between">
-        <h2 className="text-[15px] font-bold">Release steps</h2>
-        <div className="text-[13px] whitespace-nowrap text-muted tabular-nums">
-          {done.length} of {steps.length} done
-        </div>
-      </div>
-      <div
-        role="progressbar"
-        aria-label="Release steps completed"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="mb-1.5 h-[5px] rounded-[3px] bg-skeleton"
-      >
-        <div className="h-[5px] rounded-[3px] bg-brand transition-[width] duration-300" style={{ width: `${percent}%` }} />
-      </div>
+    <Section title="Release steps" aside={`${done.length} of ${steps.length} done`}>
+      <ProgressBar value={percent} label="Release steps completed" />
 
-      {steps.map((step, index) => {
-        const checked = done.includes(index)
-        return (
-          <div key={step.title} className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-start gap-3 border-t border-line-soft py-3.5">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={checked}
-              aria-label={`Mark step ${index + 1} done`}
-              onClick={() => toggle(index)}
-              className={cx(
-                'mt-px grid size-[22px] place-items-center rounded-md border-[1.5px] p-0 text-[13px] leading-none text-white',
-                checked ? 'border-brand bg-brand' : 'border-[#b9b7ad] bg-white',
-              )}
-            >
-              {checked ? '✓' : ''}
-            </button>
-            <div className="min-w-0">
-              <div className={cx('font-semibold', checked && 'opacity-55')}>
-                {index + 1}. {step.title}
+      <ol className="divide-y divide-line-soft">
+        {steps.map((step, index) => {
+          const checked = done.includes(index)
+          return (
+            <li key={step.title} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-x-4 gap-y-2 py-5 md:grid-cols-[28px_minmax(0,1fr)_auto]">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                aria-label={`Mark step ${index + 1} done`}
+                onClick={() => toggle(index)}
+                className={cx(
+                  'mt-0.5 grid size-7 place-items-center rounded-full border-[1.5px] text-white transition-colors',
+                  checked ? 'border-brand bg-brand' : 'border-control bg-paper hover:border-brand',
+                )}
+              >
+                {checked && <CheckIcon size={14} />}
+              </button>
+              <div className="min-w-0">
+                <div className={cx('text-[15px] font-semibold transition-opacity', checked && 'opacity-55')}>
+                  {index + 1}. {step.title}
+                </div>
+                <div className="mt-1 text-[13.5px] text-muted">{step.detail}</div>
+                <div className="mt-3 overflow-x-auto rounded-xl bg-ink/5 px-3 py-2 font-mono text-xs whitespace-nowrap text-ink-2">{step.command}</div>
               </div>
-              <div className="mt-0.5 text-[13px] text-muted">{step.detail}</div>
-              <div className="mt-2 overflow-x-auto rounded-md bg-canvas px-[9px] py-1.5 font-mono text-xs whitespace-nowrap text-ink-2">
-                {step.command}
-              </div>
-            </div>
-            <span
-              className={cx(
-                'rounded-md px-2 py-[3px] text-xs font-semibold whitespace-nowrap',
-                step.window ? 'bg-warn-tint text-warn' : 'bg-brand-tint text-brand-dark',
-              )}
-            >
-              {step.window ? 'Low-traffic window' : 'Safe while live'}
-            </span>
-          </div>
-        )
-      })}
-    </section>
+              <span
+                className={cx(
+                  'col-start-2 justify-self-start rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap md:col-start-3',
+                  step.window ? 'bg-warn-tint text-warn' : 'bg-brand-tint text-brand-ink',
+                )}
+              >
+                {step.window ? 'Low-traffic window' : 'Safe while live'}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </Section>
   )
 }

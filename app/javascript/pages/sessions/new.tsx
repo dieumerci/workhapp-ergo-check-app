@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Head, useForm, usePage } from '@inertiajs/react'
 import { LockIcon } from '@/components/Icons'
-
-const labelClass = 'flex flex-col gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase'
-const inputClass =
-  'rounded-[9px] border border-control bg-white px-2.5 py-[9px] text-sm font-normal tracking-normal text-ink normal-case'
+import { Notice } from '@/components/ui'
 
 export default function New() {
   const form = useForm({ email: '', password: '', captcha: '' })
@@ -54,22 +51,22 @@ export default function New() {
   return (
     <>
       <Head title="Sign in" />
-      <form onSubmit={submit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-6 shadow-sm">
+      <form onSubmit={submit} className="paper flex flex-col gap-6 rounded-[28px] p-7 sm:p-9">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight">Sign in</h1>
-          <p className="mt-0.5 text-muted">Company admins only. You will only ever see your own company.</p>
+          <h1 className="display text-[38px]">Sign in</h1>
+          <p className="mt-2 text-[14px] text-muted">Company admins only. You will only ever see your own company.</p>
         </div>
 
         {generalErrors.length > 0 && (
-          <div role="alert" className="rounded-[10px] bg-danger-tint px-3 py-2.5 text-[13px] font-medium text-danger">
+          <Notice tone="danger" role="alert">
             {generalErrors.map((message) => (
               <div key={message}>{message}</div>
             ))}
-          </div>
+          </Notice>
         )}
 
-        <label className={labelClass}>
-          Email
+        <label className="field">
+          <span className="eyebrow">Email</span>
           <input
             type="email"
             name="email"
@@ -78,12 +75,12 @@ export default function New() {
             autoFocus
             value={form.data.email}
             onChange={(event) => form.setData('email', event.target.value)}
-            className={inputClass}
+            className="input"
           />
         </label>
 
-        <label className={labelClass}>
-          Password
+        <label className="field">
+          <span className="eyebrow">Password</span>
           <input
             type="password"
             name="password"
@@ -91,32 +88,32 @@ export default function New() {
             required
             value={form.data.password}
             onChange={(event) => form.setData('password', event.target.value)}
-            className={inputClass}
+            className="input"
           />
         </label>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold tracking-wider text-muted uppercase">Verification</span>
+        <div className="flex flex-col gap-3">
+          <span className="eyebrow">Verification</span>
 
           {mode === 'image' ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <img
                 src={`/captcha?c=${challenge}`}
                 width={200}
                 height={64}
                 alt="Verification code. Type the five digits you see. If you cannot see it, use the text question instead."
-                className="rounded-lg border border-line"
+                className="rounded-xl border border-line bg-white"
               />
-              <button type="button" onClick={refresh} className="text-[13px] font-semibold text-brand hover:text-brand-dark">
+              <button type="button" onClick={refresh} className="btn btn-text btn-sm">
                 New image
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-canvas px-3 py-2.5">
-              <p id="captcha-question" aria-live="polite" className="text-sm font-medium">
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-ink/5 px-4 py-3">
+              <p id="captcha-question" aria-live="polite" className="text-[14px] font-medium">
                 {question || 'Loading your question…'}
               </p>
-              <button type="button" onClick={refresh} className="flex-none text-[13px] font-semibold text-brand hover:text-brand-dark">
+              <button type="button" onClick={refresh} className="btn btn-text btn-sm flex-none">
                 New question
               </button>
             </div>
@@ -135,7 +132,7 @@ export default function New() {
             placeholder={mode === 'image' ? 'Type the 5 digits' : 'Type the answer'}
             value={form.data.captcha}
             onChange={(event) => form.setData('captcha', event.target.value)}
-            className={`${inputClass} font-mono ${mode === 'image' ? 'tracking-[0.3em]' : ''}`}
+            className={`input font-mono ${mode === 'image' ? 'tracking-[0.3em]' : ''}`}
           />
 
           {questionError && (
@@ -149,24 +146,16 @@ export default function New() {
             </p>
           ))}
 
-          <button
-            type="button"
-            onClick={() => switchMode(mode === 'image' ? 'text' : 'image')}
-            className="self-start text-[13px] font-semibold text-brand hover:text-brand-dark"
-          >
+          <button type="button" onClick={() => switchMode(mode === 'image' ? 'text' : 'image')} className="btn btn-text btn-sm self-start">
             {mode === 'image' ? "Can't see the image? Use a text question instead" : 'Use the image instead'}
           </button>
         </div>
 
-        <button
-          type="submit"
-          disabled={form.processing}
-          className="rounded-[9px] bg-brand px-4 py-2.5 font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
-        >
+        <button type="submit" disabled={form.processing} className="btn btn-primary !h-12 w-full !text-[15px]">
           {form.processing ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p className="flex items-start gap-2 text-xs text-muted">
+        <p className="flex items-start gap-2.5 text-[12.5px] text-muted">
           <LockIcon size={14} className="mt-px flex-none" />
           The verification image and your sign-in are protected: attempts are rate limited and nothing you type is
           written to logs.

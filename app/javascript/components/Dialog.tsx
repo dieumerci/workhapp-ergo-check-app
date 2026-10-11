@@ -93,7 +93,7 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
       <div
         onClick={onClose}
         aria-hidden="true"
-        className={cx('fixed inset-0', isModal ? 'z-30 bg-ink/45' : 'z-20 bg-ink/35')}
+        className={cx('fixed inset-0 animate-fade-in backdrop-blur-[3px]', isModal ? 'z-[45] bg-ink/40' : 'z-[44] bg-ink/30')}
       />
       <div
         ref={panel}
@@ -102,10 +102,12 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
         aria-labelledby={labelledBy}
         tabIndex={-1}
         className={cx(
-          'fixed bg-white outline-none',
+          'paper fixed overflow-y-auto outline-none',
           isModal
-            ? 'top-1/2 left-1/2 z-31 max-h-[calc(100vh-32px)] w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 animate-pop-in overflow-y-auto rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,0,0,0.25)]'
-            : 'top-0 right-0 bottom-0 z-21 w-[min(420px,100vw)] animate-slide-in overflow-y-auto p-6 shadow-[-12px_0_40px_rgba(0,0,0,0.12)]',
+            ? // A centred sheet on large screens; a bottom sheet within thumb reach on phones.
+              'z-[46] max-h-[calc(100dvh-32px)] animate-pop-in rounded-[28px] p-7 max-sm:inset-x-0 max-sm:bottom-0 max-sm:max-h-[92dvh] max-sm:w-full max-sm:rounded-b-none max-sm:p-5 sm:top-1/2 sm:left-1/2 sm:w-[min(540px,calc(100vw-32px))] sm:-translate-x-1/2 sm:-translate-y-1/2'
+            : // The detail drawer floats, inset from the edges, instead of being bolted to the window.
+              'top-3 right-3 bottom-3 z-[45] w-[min(456px,calc(100vw-24px))] animate-slide-in rounded-[28px] p-7',
         )}
       >
         {children}

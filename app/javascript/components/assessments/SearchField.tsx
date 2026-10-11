@@ -71,8 +71,8 @@ export default function SearchField({ value, onSearch }: Props) {
   const shortcut = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform) ? '⌘K' : 'Ctrl K'
 
   return (
-    <form role="search" onSubmit={(event) => event.preventDefault()} className="relative min-w-[220px] flex-1">
-      <SearchIcon size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-subtle" />
+    <form role="search" onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 basis-[280px]">
+      <SearchIcon size={17} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-subtle" />
       <input
         ref={input}
         type="search"
@@ -81,7 +81,7 @@ export default function SearchField({ value, onSearch }: Props) {
         autoComplete="off"
         spellCheck={false}
         aria-label="Search assessments by employee, department or code"
-        placeholder="Search employee, department or A-code"
+        placeholder="Search name, department or code"
         onChange={(event) => change(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && text !== '') {
@@ -90,11 +90,11 @@ export default function SearchField({ value, onSearch }: Props) {
             clear()
           }
         }}
-        className="w-full rounded-full border border-control bg-white py-2 pr-20 pl-10 text-sm text-ink placeholder:text-subtle [&::-webkit-search-cancel-button]:hidden"
+        className="input !rounded-full !pr-24 !pl-11"
       />
-      <div className="absolute top-1/2 right-2.5 flex -translate-y-1/2 items-center gap-1.5">
+      <div className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1.5">
         {text !== '' ? (
-          <button type="button" onClick={clear} aria-label="Clear search" className="grid size-6 place-items-center rounded-full bg-hover text-ink-2 hover:bg-line">
+          <button type="button" onClick={clear} aria-label="Clear search" className="grid size-7 place-items-center rounded-full bg-hover text-ink-2 hover:bg-line">
             <CloseIcon size={11} />
           </button>
         ) : (

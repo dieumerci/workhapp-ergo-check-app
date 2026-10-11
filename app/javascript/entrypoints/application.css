@@ -3,51 +3,98 @@
 @import '@fontsource/instrument-sans/500.css';
 @import '@fontsource/instrument-sans/600.css';
 @import '@fontsource/instrument-sans/700.css';
+@import '@fontsource/instrument-serif/latin-400.css';
+@import '@fontsource/instrument-serif/latin-400-italic.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 
 @plugin '@tailwindcss/forms';
 
-/* Design tokens taken from the Claude Design prototype. */
+/*
+ * ErgoCheck design system: "Editorial Spatial Minimalism", tuned for a calm, trustworthy health product.
+ *
+ *   Atmosphere  snow-white canvas with neutral (not cream) greys, so it still reads as white under True Tone or
+ *               Night Shift; surfaces are pure white and lift off the canvas with a hairline and a soft shadow.
+ *               A single, barely visible wash of brand green sits top-left. For pure white everywhere, set
+ *               --color-canvas to #ffffff; nothing else needs to change, because components only use tokens.
+ *   Material    solid "paper" for anything you read; restrained glass only for floating controls
+ *               (navigation, toast, cookie notice), never for content or inputs.
+ *   Type        Instrument Serif for display (page titles, big numbers), Instrument Sans for the interface,
+ *               IBM Plex Mono for codes. Self-hosted: no third-party font requests for a health product.
+ *   Colour      one brand accent (pine) and one neutral family do the work; the five statuses are the only
+ *               other hues, each with a text "ink" that passes 4.5:1 on its tint and on the canvas.
+ *   Shape       radius follows hierarchy: sheets 28, surfaces 20, controls 12, pills full.
+ *   Motion      150 to 300 ms, one easing, nothing that shifts layout, off under prefers-reduced-motion.
+ *
+ * Components consume these tokens (utility classes or the .btn / .field / .glass helpers below); there are no
+ * raw colours in components.
+ */
 @theme {
   --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-canvas: #f4f3ee;
+  /* Surfaces */
+  --color-canvas: #fafbfa;
+  --color-paper: #ffffff;
   --color-surface: #ffffff;
-  --color-head: #faf9f6;
-  --color-ink: #1c2421;
-  --color-ink-2: #3f4a45;
-  --color-muted: #66706b;
-  /* The prototype's #8a938e is only 3.2:1 on white (2.8:1 on the page background), below WCAG AA for
-     text, and it carries real information ("Not scored yet", employee refs). Darkened to 5.0:1 / 4.5:1. */
-  --color-subtle: #68716c;
-  --color-line: #e4e2da;
-  --color-line-soft: #efeee8;
-  --color-control: #d6d4cb;
-  --color-skeleton: #eceae2;
-  --color-hover: #f0efe9;
-  --color-row-hover: #f8f7f3;
+  --color-head: #f6f7f6;
+  --color-hover: #f0f2f1;
+  --color-row-hover: #f6f8f7;
+  --color-skeleton: #eceeed;
 
+  /* Text. Contrast on canvas / paper: ink 16.0 / 16.5, ink-2 9.8 / 10.1, muted 6.2 / 6.4, subtle 5.5 / 5.7 */
+  --color-ink: #18201c;
+  --color-ink-2: #39443f;
+  --color-muted: #56615b;
+  --color-subtle: #5f6963;
+
+  /* Lines */
+  --color-line: #e3e7e5;
+  --color-line-soft: #edf0ee;
+  --color-control: #d2d8d5;
+
+  /* Brand: pine. brand-ink is the text colour on its tint (7.9 on canvas). */
   --color-brand: #0e6b5c;
   --color-brand-dark: #0a4f44;
-  --color-brand-tint: #e1f0ec;
+  --color-brand-ink: #0a5547;
+  --color-brand-tint: #dfeee9;
 
-  --color-ok: #17663a;
+  /* The five statuses: ink = text, tint = soft fill, dot = marker (decorative, always paired with the label). */
+  --color-warn: #7a4e00;
+  --color-warn-tint: #fbefd3;
+  --color-warn-dot: #c98a12;
+  --color-info: #1b4b8c;
+  --color-info-tint: #e1ebf8;
+  --color-info-dot: #3a74c8;
+  --color-ok: #14623a;
   --color-ok-tint: #ddf1e4;
-  --color-warn: #8a5a00;
-  --color-warn-tint: #fbefd2;
-  --color-info: #1d4f91;
-  --color-info-tint: #dee9f8;
-  --color-danger: #a3361f;
-  --color-danger-tint: #fbe0da;
-  --color-neutral: #55605b;
-  --color-neutral-tint: #e8e8e4;
+  --color-ok-dot: #2a8f5a;
+  --color-danger: #9a3320;
+  --color-danger-tint: #fbe2db;
+  --color-danger-dot: #c5502f;
+  --color-neutral: #4f5a55;
+  --color-neutral-tint: #eceeed;
+  --color-neutral-dot: #8c9690;
 
+  /* The sign-in panel: deep pine with a mint accent. */
+  --color-pine: #0a3f36;
+  --color-pine-glow: #14806d;
+  --color-pine-mint: #9fd8c9;
+  --color-sand: #c98a12;
+
+  /* Elevation: hairline, floating controls, sheets */
+  --shadow-lift: 0 1px 2px rgb(24 32 28 / 0.06), 0 4px 14px rgb(24 32 28 / 0.05);
+  --shadow-float: 0 1px 2px rgb(24 32 28 / 0.05), 0 12px 36px rgb(24 32 28 / 0.1);
+  --shadow-sheet: 0 2px 6px rgb(24 32 28 / 0.06), 0 32px 90px rgb(24 32 28 / 0.22);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-pulse-soft: pulse-soft 1.1s infinite;
   --animate-pulse-badge: pulse-soft 1.4s infinite;
-  --animate-slide-in: slide-in 0.22s ease-out;
-  --animate-pop-in: pop-in 0.2s ease-out;
+  --animate-slide-in: sheet-in 0.3s var(--ease-out-soft);
+  --animate-pop-in: pop-in 0.22s var(--ease-out-soft);
+  --animate-rise: rise 0.32s var(--ease-out-soft);
+  --animate-fade-in: fade-in 0.2s ease-out;
 
   @keyframes pulse-soft {
     0%,
@@ -58,9 +105,9 @@
       opacity: 0.45;
     }
   }
-  @keyframes slide-in {
+  @keyframes sheet-in {
     from {
-      transform: translateX(24px);
+      transform: translateX(28px) scale(0.985);
       opacity: 0;
     }
     to {
@@ -70,6 +117,16 @@
   }
   @keyframes pop-in {
     from {
+      transform: translateY(10px) scale(0.985);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  @keyframes rise {
+    from {
       transform: translateY(8px);
       opacity: 0;
     }
@@ -78,20 +135,37 @@
       opacity: 1;
     }
   }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 @layer base {
   html {
     background: var(--color-canvas);
+    scroll-padding-top: 96px;
   }
   body {
     margin: 0;
-    background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 14px;
-    line-height: 1.45;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Atmosphere: one wash you only notice when it is gone. */
+    background-color: var(--color-canvas);
+    background-image: radial-gradient(1100px 520px at 4% -10%, rgb(14 107 92 / 0.045), transparent 62%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: var(--color-brand-tint);
+    color: var(--color-brand-ink);
   }
   button {
     cursor: pointer;
@@ -103,6 +177,196 @@
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
+  input[type='search']::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+@layer components {
+  /* Page titles and big numbers: the editorial voice. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.012em;
+    line-height: 1.04;
+  }
+
+  /* Section label: small, uppercase, quiet. */
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* A raised reading surface: dialogs, sheets, the sign-in panel. Solid on purpose. */
+  .paper {
+    background: var(--color-paper);
+    border: 1px solid var(--color-line-soft);
+    box-shadow: var(--shadow-sheet);
+  }
+
+  /* Glass is a material for floating controls only. It falls back to solid paper where blur is missing. */
+  .glass {
+    background: color-mix(in oklab, var(--color-paper) 78%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
+    border: 1px solid rgb(24 32 28 / 0.08);
+    box-shadow:
+      var(--shadow-float),
+      inset 0 1px 0 rgb(255 255 255 / 0.8);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      background: var(--color-paper);
+    }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+  }
+  .btn-primary {
+    background: var(--color-brand);
+    color: #fff;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      0 1px 2px rgb(10 79 68 / 0.35);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-brand-dark);
+  }
+  .btn-quiet {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px solid var(--color-control);
+    box-shadow: 0 1px 1px rgb(24 32 28 / 0.04);
+  }
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--color-hover);
+  }
+  .btn-sm {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+  .btn-text {
+    height: auto;
+    padding: 4px 2px;
+    color: var(--color-brand-ink);
+    border-radius: 6px;
+  }
+  .btn-text:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    color: var(--color-ink-2);
+    transition: background-color 0.15s ease;
+  }
+  .icon-btn:hover {
+    background: var(--color-hover);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .input {
+    height: 44px;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--color-control);
+    background: var(--color-paper);
+    padding: 0 14px;
+    font-size: 14px;
+    color: var(--color-ink);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .input:hover {
+    border-color: color-mix(in oklab, var(--color-control) 55%, var(--color-ink));
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 4px rgb(14 107 92 / 0.14);
+  }
+  .input::placeholder {
+    color: var(--color-subtle);
+  }
+
+  /* A segmented control: a quiet track with a lifted active segment. */
+  .segmented {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-ink) 6%, transparent);
+  }
+  .segment {
+    height: 30px;
+    padding: 0 13px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted);
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+  .segment:hover {
+    color: var(--color-ink);
+  }
+  .segment[aria-pressed='true'] {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+/* Touch screens: every control is at least 44 x 44. */
+@media (pointer: coarse) {
+  .btn:not(.btn-text),
+  .icon-btn,
+  .segment,
+  .input {
+    min-height: 44px;
+  }
+  .icon-btn {
+    min-width: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -112,5 +376,6 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
