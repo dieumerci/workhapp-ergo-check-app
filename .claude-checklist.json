@@ -409,6 +409,11 @@
           "done": true
         },
         {
+          "id": "12.17",
+          "title": "First sign-in on Railway failed: the seed gate accepted only the exact string true and never updated an existing demo password. Both fixed and tested; no password in the log",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

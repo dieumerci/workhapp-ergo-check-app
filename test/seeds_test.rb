@@ -50,7 +50,7 @@ class SeedsTest < ActiveSupport::TestCase
 
   test "every demo admin can authenticate" do
     %w[maya.reyes@northwind.example daniel.osei@northwind.example jonas.weber@harborpine.example aisha.bello@summitphysio.example].each do |email|
-      assert Admin.authenticate_by(email: email, password: DemoData::DEMO_PASSWORD), "#{email} should be able to sign in"
+      assert Admin.authenticate_by(email: email, password: DemoData.password), "#{email} should be able to sign in"
     end
   end
 
@@ -66,6 +66,62 @@ class SeedsTest < ActiveSupport::TestCase
     capture_io { in_production(allow: "true") { load Rails.root.join("db/seeds.rb") } }
     assert Admin.find_by(email: "aisha.bello@summitphysio.example")
   end
+
+test "ALLOW_DEMO_SEED accepts the usual spellings of yes, and nothing else" do
+  email = "aisha.bello@summitphysio.example"
+
+  [ "true", "TRUE", "True", " true ", "1", "yes", "on", "\"true\"" ].each do |value|
+    Admin.where(email: email).delete_all
+    capture_io { in_production(allow: value) { load Rails.root.join("db/seeds.rb") } }
+    assert Admin.find_by(email: email), "ALLOW_DEMO_SEED=#{value.inspect} should load the demo data"
+  end
+
+  [ "false", "0", "no", "off", "", "nope" ].each do |value|
+    Admin.where(email: email).delete_all
+    capture_io { in_production(allow: value) { load Rails.root.join("db/seeds.rb") } }
+    assert_nil Admin.find_by(email: email), "ALLOW_DEMO_SEED=#{value.inspect} should not load the demo data"
+  end
+end
+
+test "a skipped production seed shows what the variable actually contained" do
+  output, = capture_io { in_production(allow: "maybe") { load Rails.root.join("db/seeds.rb") } }
+
+  assert_includes output, %(ALLOW_DEMO_SEED is "maybe")
+end
+
+test "the demo admins' password follows DEMO_ADMIN_PASSWORD every time the seeds run" do
+  email = "maya.reyes@northwind.example"
+  original = ENV["DEMO_ADMIN_PASSWORD"]
+  ENV["DEMO_ADMIN_PASSWORD"] = "a-brand-new-demo-password"
+
+  capture_io { load Rails.root.join("db/seeds.rb") }
+
+  assert Admin.authenticate_by(email: email, password: "a-brand-new-demo-password"), "the account should now use the configured password"
+  assert_nil Admin.authenticate_by(email: email, password: "ergocheck-demo-2026"), "the old password should no longer work"
+  assert_equal 2, Admin.where(company: Company.find_by!(name: "Northwind Logistics")).count, "no admin should be duplicated"
+ensure
+  original ? ENV["DEMO_ADMIN_PASSWORD"] = original : ENV.delete("DEMO_ADMIN_PASSWORD")
+end
+
+test "a blank DEMO_ADMIN_PASSWORD falls back to the documented default" do
+  original = ENV["DEMO_ADMIN_PASSWORD"]
+  ENV["DEMO_ADMIN_PASSWORD"] = "   "
+
+  assert_equal "ergocheck-demo-2026", DemoData.password
+ensure
+  original ? ENV["DEMO_ADMIN_PASSWORD"] = original : ENV.delete("DEMO_ADMIN_PASSWORD")
+end
+
+test "production never prints the demo password into the log" do
+  original = ENV["DEMO_ADMIN_PASSWORD"]
+  ENV["DEMO_ADMIN_PASSWORD"] = "do-not-print-this-password"
+  output, = capture_io { in_production(allow: "true") { load Rails.root.join("db/seeds.rb") } }
+
+  assert_not_includes output, "do-not-print-this-password"
+  assert_includes output, "DEMO_ADMIN_PASSWORD"
+ensure
+  original ? ENV["DEMO_ADMIN_PASSWORD"] = original : ENV.delete("DEMO_ADMIN_PASSWORD")
+end
 
   private
 

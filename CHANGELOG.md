@@ -11,6 +11,7 @@ All notable changes, generated from the Conventional Commits history. Versioning
 - **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
 
 ### Fixes
+- **seeds:** accept `true`/`1`/`yes`/`on` for `ALLOW_DEMO_SEED`, re-apply `DEMO_ADMIN_PASSWORD` to the demo accounts on every run, show what the variable contained when skipping, and stop printing the password in production logs
 - **docs:** say plainly that a new Railway service does not read `railway.json` (Config as Code is unavailable after 2026-08-28) and that the Settings page is the configuration
 - **deploy:** run `db:prepare db:seed` when the web process boots, so a platform that skips the pre-deploy step no longer crashes the in-Puma job worker on an empty database; test the real server against an empty database
 - **deploy:** give production its own `database.yml` block (it was commented out), stop the boot with a readable message when `DATABASE_URL` is missing, and test it without the variable

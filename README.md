@@ -38,7 +38,7 @@ After `bin/rails db:setup` (or `bin/rails db:seed`) these four company admins ex
 | `jonas.weber@harborpine.example` | Harbor & Pine Clinics | 24 assessments |
 | `aisha.bello@summitphysio.example` | Summit Physio Group | 40 assessments (with legacy-messy statuses) |
 
-**Password: `ergocheck-demo-2026`** (change it before seeding with `DEMO_ADMIN_PASSWORD=...`; on any hosted copy, always do).
+**Password: `ergocheck-demo-2026`** (change it before seeding with `DEMO_ADMIN_PASSWORD=...`; on any hosted copy, always do). Seeding again always re-applies the configured password to these four accounts, so changing the variable and re-running `bin/rails db:seed` (or redeploying a hosted copy with `ALLOW_DEMO_SEED=true`) changes it.
 
 **Signing in has three parts:** email, password, then the **verification**. It is a real self-hosted CAPTCHA: type the five digits in the
 image. If you cannot read it, click *Can't see the image? Use a text question instead* and answer the sum (for example "What is 36 minus 25?").

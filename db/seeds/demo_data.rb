@@ -13,7 +13,7 @@
 # Rows are inserted with insert_all so, like the real legacy table, they are
 # allowed to hold values the validations would now reject.
 class DemoData
-  DEMO_PASSWORD = ENV.fetch("DEMO_ADMIN_PASSWORD", "ergocheck-demo-2026")
+  DEFAULT_PASSWORD = "ergocheck-demo-2026".freeze
   SECTIONS = %w[workstation_setup posture_movement breaks_recovery discomfort_reported].freeze
   DEPARTMENTS = [ "Warehouse", "Dispatch", "Finance", "Customer Support", "Engineering", "People & Culture" ].freeze
   FIRST_NAMES = %w[Amara Liam Priya Daniel Sofia Kwame Hana Mateo Zoe Ibrahim Chloe Tariq Ingrid Noah Lucia Samir].freeze
@@ -41,6 +41,12 @@ class DemoData
     def pick(count)
       (next_float * count).floor
     end
+  end
+
+  # Read when needed, not when the file loads, so changing DEMO_ADMIN_PASSWORD and seeding
+  # again takes effect. A blank value means "not set".
+  def self.password
+    ENV["DEMO_ADMIN_PASSWORD"].to_s.strip.then { |value| value.empty? ? DEFAULT_PASSWORD : value }
   end
 
   def self.run
@@ -74,17 +80,26 @@ class DemoData
         daniel.osei@northwind.example      Northwind Logistics (same company, second admin)
         jonas.weber@harborpine.example     Harbor & Pine Clinics (24 assessments)
         aisha.bello@summitphysio.example   Summit Physio Group (40 assessments)
-      Password for all of them: #{DEMO_PASSWORD}
+      Password for all of them: #{shown_password}
       (set DEMO_ADMIN_PASSWORD before seeding to choose your own)
     TEXT
   end
 
+  # A demo account always ends up with the configured demo password. (It used to be set only
+  # when the account was first created, so changing DEMO_ADMIN_PASSWORD later did nothing and
+  # accounts created under another value could not be signed in to.)
   def create_admin(company, name, email)
-    Admin.find_or_create_by!(email: email) do |admin|
-      admin.company = company
-      admin.name = name
-      admin.password = DEMO_PASSWORD
-    end
+    admin = Admin.find_or_initialize_by(email: email)
+    admin.company ||= company
+    admin.name = name if admin.new_record?
+    admin.password = DemoData.password unless admin.persisted? && admin.authenticate(DemoData.password)
+    admin.save!
+    admin
+  end
+
+  # The password is a secret on a hosted copy: never write it to a log that others can read.
+  def shown_password
+    Rails.env.production? ? "the value of DEMO_ADMIN_PASSWORD" : DemoData.password
   end
 
   def seed_assessments(company, domain:, count:, generator_seed:, mess:, fixed_ids: false)
