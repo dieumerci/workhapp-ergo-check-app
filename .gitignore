@@ -42,3 +42,8 @@ node_modules
 # https://vite.dev/guide/env-and-mode.html#env-files
 *.local
 
+
+# Personal notes for the recorded walkthrough and for interview questions.
+# Kept on this machine only; never committed.
+/LOOM_VIDEO_SCRIPT.md
+/INTERVIEW_PREP.md

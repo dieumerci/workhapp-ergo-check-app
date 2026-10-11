@@ -2,6 +2,18 @@
 
 All notable changes, generated from the Conventional Commits history. Versioning follows [SemVer](https://semver.org).
 
+## [Unreleased]
+
+### Features
+- **seeds:** add a third tenant and a second admin, and skip production quietly (`a960fdb`)
+- **assessments:** add a tenant-safe "New assessment" flow (`ae41044`)
+- **deploy:** add `railway.json` and Railway deployment steps
+- **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
+
+### Fixes
+- **logging:** filter a bare `name` and stop development's query tags from printing values inline (`ae41044`)
+- **dev:** make bin/dev serve Rails on the documented port (`eaa4d4b`)
+
 ## [0.1.0] - 2026-10-10
 
 First release: the three tasks of the take-home assignment, the sign-in / CAPTCHA / cookie extras, an independent security review with its fixes, and the production configuration.

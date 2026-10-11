@@ -283,6 +283,8 @@ less than it appears to; it is defence in depth, not the lock. If stronger bot r
 
 **Sessions.** The cookie holds a random token; a server-side `admin_sessions` row holds its digest. Signing out deletes the row, so a copied cookie stops working (tested), and the server, not a client-held timestamp, enforces the 8-hour idle expiry. The exports poller sends `X-Background-Poll` so a tab left open in the background no longer keeps a session alive indefinitely.
 
+**Why not Devise?** Sign-in is `has_secure_password` (bcrypt) plus the server-side `admin_sessions` table, not Devise. Admins are provisioned, so there is no sign-up, confirmation, reset or lockout flow for Devise's modules to serve, and the parts this app does need (a replay-proof CAPTCHA, revocable sessions that expire on the server, a per-account throttle, no account enumeration) are not Devise features, so they would have been custom code on top of it anyway. Using Rails' own primitives keeps the dependency surface and the amount of framework behaviour to audit small. **Trade-off:** I own the sign-in code, including its security tests. If the product later needs password reset, 2FA or SSO, that is the moment to adopt Devise (or the Rails authentication generator's reset flow) rather than grow this layer.
+
 **Cookies.** Strictly-necessary cookies need no consent; the one optional cookie (remembered dashboard filters) is written **only after opt-in**, is signed, validated against a whitelist on read, and deleted on withdrawal. Consent is explicit: only the literal `"true"` grants it (a test caught Rails' loose boolean casting accepting `"yes please"`). The same consent gates `localStorage` for the release-step ticks.
 
 ## 8. Where I departed from the design, and why
@@ -298,6 +300,8 @@ less than it appears to; it is defence in depth, not the lock. If stronger bot r
 | Safeguards: 4 cards | + a sign-in/cookies card | the two extra features |
 | Score cleared on moving to Pending | hidden, not cleared | destroying answers on a status change is irreversible |
 | Backfill as a job (`BackfillStatusJob`) | a rake task + class | a person should run, watch and stop it; not fire-and-forget |
+| No way to create data (the brief asks for restraint and a small UI) | A **New assessment** dialog: `POST /assessments`, one model (`NewAssessment`), one component, 14 tests | **The owner asked for an app that can be explored end to end, so this goes beyond the brief; it is the one deliberate piece of scope creep.** It obeys the same rules: the company comes from the session, another tenant's employee is a 404, the status goes through `Status.normalize`, scores are four whole numbers 0–100 or none, and the new employee is created in the same transaction (a rejected assessment leaves nothing behind). The employee list is an optional Inertia prop fetched when the dialog opens, so the dashboard stays at two queries. It lives in its own files (`new_assessment.rb`, `NewAssessmentDialog.tsx`) and can be removed without touching the three tasks; the log fixes that shipped in the same commit (§12) are independent and should be kept. |
+| Seeds abort in production | Seeds skip quietly unless `ALLOW_DEMO_SEED=true` | a hosting deploy that runs `db:seed` on every release must not fail, and must never plant demo accounts by accident |
 
 ## 9. Trade-offs and what I would do next
 
@@ -305,7 +309,8 @@ less than it appears to; it is defence in depth, not the lock. If stronger bot r
 - **Read-time score** costs four JSON lookups per displayed row (ten rows). If scores are ever needed for sorting or reporting across rows, a stored column becomes the right answer, and it can be backfilled with the same batching pattern.
 - **Local storage in production is unsafe on ephemeral disks**; S3 is wired and documented but I could not test it without credentials.
 - **The CAPTCHA** is the weakest control in the app against a determined attacker, especially with the accessible text alternative; rate limiting (per address and per account) and the generic error carry the weight.
-- **Not done:** audit log of exports, per-admin permissions beyond "company admin", Loom video, mobile polish beyond a working responsive layout, internationalisation.
+- **New assessment is not an audit-grade write path.** It does not record who created an assessment, and there is no edit or delete for employees or assessments (an assessment is retired by archiving it). If the product needs those, an audit trail comes first.
+- **Not done:** audit log of exports, per-admin permissions beyond "company admin", self-service sign-up and password reset, admin management, Loom video, mobile polish beyond a working responsive layout, internationalisation.
 
 ## 10. Build log: the steps and why each was done this way
 
@@ -333,7 +338,11 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 17 | Production configuration | `6f7dba6`, `0486d21`, `ae56f36` | Verified by booting production mode; found and fixed a routing bug and a log leak |
 | 18 | Docs: README, SOLUTION, runbook, `.env.example` | `d981e35`, `a5c6bb3` | The reasoning, the measurements and the plan written down while fresh |
 | 19 | Independent review, then fixes | `0d3c4cf`, `2c8f4c5`, `847d7cb`, `c4dd75a`, `9080ef9`, `a11de55`, `1325f77`, `c71e9e7` | A reviewer given only the code and the brief found what my own tests had not (§12); every fix has a test that fails without it. The last gate, run on a fresh clone of the final commit, found that one of my own fixes broke production boot (`c71e9e7`) |
-| 20 | Production-readiness audit and release prep | this commit | `docs/PRODUCTION_AUDIT_CHECKLIST.md`, `CHANGELOG.md`, version 0.1.0 |
+| 20 | Production-readiness audit and release prep | `c748751` | `docs/PRODUCTION_AUDIT_CHECKLIST.md`, `CHANGELOG.md`, version 0.1.0 |
+| 21 | `bin/dev` port fix | `eaa4d4b` | Foreman gives each process `PORT + 100 × position`, so Rails had been on 3100; `web` now comes first |
+| 22 | New assessment | `ae41044` | The owner wanted to explore the app end to end (§8). Its tests found a real log leak (§12) |
+| 23 | Richer seeds | `a960fdb` | A third tenant and a second admin; production skips the seeds instead of aborting |
+| 24 | Railway config and the app guide | this commit | `railway.json`, `APP_GUIDE.md`, README rewrite; **the Railway path is untested**, see §11 |
 
 **Defects found by testing, not by reading — all fixed** (the second batch came from the independent review, §12): the design's index not helping the page; a `TimeBudgetExceeded` constant that would have raised `NameError` in the job's `rescue` in production (Zeitwerk); Rails' loose boolean cast
 granting cookie consent for `"yes please"`; the preview endpoint losing its date error to `valid?`; a half-applied migration that could not be reversed; a parallel test race on a cold Vite build; npm and Ruby warnings; a dev-only redirect that also ran in
@@ -341,11 +350,11 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 231 automated tests, green twice in a row (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 248 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening, new assessment, seeds); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser against the design's screenshots; production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
-**Not verified, so do not assume:** the Docker build (no Docker here); S3 storage (no credentials); a real Heroku deploy; behaviour on a production-sized table beyond the 300k/1.2M-row benchmark; the Loom video; any push to GitHub (this repository has no remote configured).
+**Not verified, so do not assume:** the Docker build (no Docker here); S3 storage (no credentials); a real Heroku or Railway deploy (`railway.json` follows Railway's documented schema but was never executed); behaviour on a production-sized table beyond the 300k/1.2M-row benchmark; the Loom video; any push to GitHub (this repository has no remote configured).
 
 ## 12. The independent review, and what it changed
 
@@ -366,6 +375,7 @@ before fixing and now has a test that fails without the fix. Full list with evid
 | Dialog focus escape, no inert background, no error boundary | accessibility and resilience | portal + `inert`, topmost-only keys, error boundary |
 | No non-visual CAPTCHA alternative | blind admins could not sign in | accessible text question, stricter throttle |
 | *(mine, found by the final gate)* the storage guard raised `NameError` in an initializer | every production boot would have failed; dev and test skip that branch, so 228 green tests missed it | `after_initialize`, plus a test that boots real production mode in a subprocess |
+| *(mine, found by the New assessment tests)* SQL logging ignores a model's own `filter_attributes`, and development's query log tags switch prepared statements off | a new employee's name was written to the SQL log in clear (as a bind in the test log, as a literal in `log/development.log`) | a bare `name` joins the global filter list; query log tags are off in development so values stay binds and are masked |
 
 One reviewer finding I **rejected**: that a computable score is hidden for legacy blank-status rows. That is the design's rule ("Pending… say Not scored yet"), and those exact rows are what the backfill audit lists for a human; I documented it instead of changing it.
 

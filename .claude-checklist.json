@@ -326,6 +326,64 @@
           "done": true
         }
       ]
+    },
+    {
+      "id": "12",
+      "title": "Owner follow-ups (2026-10-11)",
+      "branch": "docs/railway-and-guides",
+      "done": false,
+      "subtasks": [
+        {
+          "id": "12.1",
+          "title": "Click-through of every screen as a user; the missing piece was a way to create data, so a tenant-safe New assessment flow was added (ae41044)",
+          "done": true
+        },
+        {
+          "id": "12.2",
+          "title": "Richer seed data: a third tenant (Summit Physio Group) and a second Northwind admin; production skips seeds unless ALLOW_DEMO_SEED=true (a960fdb)",
+          "done": true
+        },
+        {
+          "id": "12.3",
+          "title": "Log leak found by the new tests and fixed: bare name filtered, dev query log tags off (SOLUTION §12)",
+          "done": true
+        },
+        {
+          "id": "12.4",
+          "title": "Run on another port documented (PORT=4000 bin/dev, VITE_RUBY_PORT for Vite)",
+          "done": true
+        },
+        {
+          "id": "12.5",
+          "title": "README.md rewritten: what the app is, architecture, demo logins, \"is it fully functional\", why not Devise, Railway steps",
+          "done": true
+        },
+        {
+          "id": "12.6",
+          "title": "APP_GUIDE.md: plain-language tour, settings, everyday tasks, troubleshooting",
+          "done": true
+        },
+        {
+          "id": "12.7",
+          "title": "railway.json (Dockerfile build, pre-deploy database steps, /up healthcheck); not executed on Railway",
+          "done": true
+        },
+        {
+          "id": "12.8",
+          "title": "Two git-ignored local files: LOOM_VIDEO_SCRIPT.md (talk track) and INTERVIEW_PREP.md (code tour and likely questions)",
+          "done": true
+        },
+        {
+          "id": "12.9",
+          "title": "Every requirement in the assignment PDF re-checked against the running app and the tests (SOLUTION §2)",
+          "done": true
+        },
+        {
+          "id": "12.10",
+          "title": "Push to GitHub (waiting for the owner's go-ahead)",
+          "done": false
+        }
+      ]
     }
   ],
   "outOfScope": []
