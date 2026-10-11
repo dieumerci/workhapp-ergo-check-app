@@ -20,3 +20,9 @@ export function formatRange(from: string, to: string): string {
   if (!from && !to) return 'All dates'
   return `${from ? formatDate(from) : 'Start'} – ${to ? formatDate(to) : 'Today'}`
 }
+
+// "Downloaded 2 times, last Oct 12, 2026" or "Not downloaded yet".
+export function formatDownloads(count: number, lastIso: string | null): string {
+  if (count === 0 || !lastIso) return 'Not downloaded yet'
+  return `Downloaded ${count} ${count === 1 ? 'time' : 'times'}, last ${formatRequested(lastIso).toLowerCase()}`
+}

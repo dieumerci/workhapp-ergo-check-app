@@ -37,7 +37,7 @@ class InertiaController < ApplicationController
   def exports_payload
     return [] unless Current.company
 
-    Current.company.assessment_exports.with_attached_file.recent.limit(20).map do |export|
+    Current.company.assessment_exports.with_attached_file.includes(:admin).recent.limit(20).map do |export|
       export.to_view.merge(download_path: export.downloadable? ? download_export_path(export) : nil)
     end
   end

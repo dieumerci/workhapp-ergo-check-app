@@ -45,6 +45,7 @@ class ExportsController < InertiaController
     export = Current.company.assessment_exports.find(params[:id])
 
     if export.downloadable?
+      export.record_download!
       redirect_to export.download_url, allow_other_host: true
     elsif export.expired?
       redirect_to exports_path, alert: "That download has expired. Request a new export."

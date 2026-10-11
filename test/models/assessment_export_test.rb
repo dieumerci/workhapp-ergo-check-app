@@ -83,11 +83,13 @@ class AssessmentExportTest < ActiveSupport::TestCase
     assert_nil export.to_view[:error]
   end
 
-  test "the view carries no personal data" do
+  test "the view carries no employee data, only the requesting admin's name and the audit counters" do
     view = export(from_date: Date.new(2026, 9, 1), to_date: Date.new(2026, 9, 30), status_filter: "completed").to_view
 
-    assert_equal %i[can_retry error from id progress requested_at row_count state state_label status status_label to], view.keys.sort
+    assert_equal %i[can_retry download_count error from id last_downloaded_at progress requested_at requested_by row_count state state_label status status_label to],
+                 view.keys.sort
     assert_equal "Completed", view[:status_label]
+    assert_equal 0, view[:download_count]
   end
 
   test "stalled means no heartbeat for a while, not merely slow" do

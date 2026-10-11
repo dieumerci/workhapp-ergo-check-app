@@ -13,6 +13,9 @@ export type ExportView = {
   status: StatusValue | 'all'
   status_label: string
   requested_at: string
+  requested_by: string
+  download_count: number
+  last_downloaded_at: string | null
   error: string | null
   can_retry: boolean
   download_path: string | null

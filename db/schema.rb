@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_220002) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -79,6 +79,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_220002) do
     t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "download_count", default: 0, null: false
+    t.datetime "last_downloaded_at"
     t.index ["admin_id"], name: "index_assessment_exports_on_admin_id"
     t.index ["company_id", "created_at"], name: "index_assessment_exports_on_company_id_and_created_at", order: { created_at: :desc }
     t.index ["state", "expires_at"], name: "index_assessment_exports_on_state_and_expires_at"

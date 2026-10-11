@@ -74,6 +74,13 @@ class AssessmentExport < ApplicationRecord
     file.url(expires_in: DOWNLOAD_URL_LIFETIME, disposition: "attachment", filename: file.filename)
   end
 
+  # Counts one use of the download link. A single atomic UPDATE (no read, no
+  # lost update when two admins click at once) that leaves updated_at alone:
+  # that column is the build heartbeat, not a "last touched" marker.
+  def record_download!
+    self.class.where(id: id).update_all([ "download_count = download_count + 1, last_downloaded_at = ?", Time.current ])
+  end
+
   # What the page shows; "expired" and "stalled" are derived, not stored.
   def display_state
     return "failed" if stalled?
@@ -110,7 +117,9 @@ class AssessmentExport < ApplicationRecord
     "queued" => "Queued", "processing" => "Building file", "ready" => "Ready", "failed" => "Failed", "expired" => "Expired"
   }.freeze
 
-  # What the page needs; nothing here is personal data.
+  # What the page needs. Nothing about an employee is in here; the requesting
+  # admin's name is, because an audit trail that cannot say who exported the
+  # data is not one. It is only ever shown to admins of the same company.
   def to_view
     {
       id: id,
@@ -123,6 +132,9 @@ class AssessmentExport < ApplicationRecord
       status: status_filter,
       status_label: status_filter == "all" ? "All statuses" : Status.label(status_filter),
       requested_at: created_at.iso8601,
+      requested_by: admin.name,
+      download_count: download_count,
+      last_downloaded_at: last_downloaded_at&.iso8601,
       error: error_message,
       can_retry: failed? || expired? || stalled?
     }

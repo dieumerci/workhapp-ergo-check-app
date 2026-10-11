@@ -3,7 +3,7 @@ import { DownloadIcon } from '@/components/Icons'
 import ProgressBar from '@/components/exports/ProgressBar'
 import StateBadge from '@/components/exports/StateBadge'
 import { useExports } from '@/components/exports/ExportProvider'
-import { formatRange, formatRequested } from '@/lib/format'
+import { formatDownloads, formatRange, formatRequested } from '@/lib/format'
 import type { ExportView } from '@/types/exports'
 
 const GRID = 'grid grid-cols-[minmax(0,1.6fr)_150px_minmax(120px,1fr)_150px] items-center gap-4'
@@ -53,8 +53,11 @@ export default function Index() {
               <div className="min-w-0">
                 <div className="font-semibold">{formatRange(job.from, job.to)}</div>
                 <div className="mt-0.5 text-[13px] text-muted">
-                  {job.status_label} · Requested {formatRequested(job.requested_at)}
+                  {job.status_label} · Requested {formatRequested(job.requested_at)} by {job.requested_by}
                 </div>
+                {job.state === 'ready' && (
+                  <div className="mt-0.5 text-[13px] text-muted">{formatDownloads(job.download_count, job.last_downloaded_at)}</div>
+                )}
                 {job.error && <div className="mt-1 text-[13px] text-danger">{job.error}</div>}
               </div>
               <div>
@@ -90,6 +93,7 @@ export default function Index() {
 
         <div className="text-[13px] text-muted">
           Download links stay valid for 24 hours. Exports are limited to {auth.company?.name}, taken from your signed-in account.
+          Every export records who requested it and how often it was downloaded, so you can see where this data went.
         </div>
       </section>
     </>

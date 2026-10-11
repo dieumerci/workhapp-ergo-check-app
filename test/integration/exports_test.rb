@@ -352,6 +352,88 @@ class ExportsTest < ActionDispatch::IntegrationTest
     assert_equal "expired", props[:exports].first[:state]
   end
 
+  # ---- audit trail: who exported, and how often it was fetched ----------------
+
+  def ready_export(company: @company, admin: @admin)
+    AssessmentExport.create!(company: company, admin: admin).tap do |export|
+      export.file.attach(io: StringIO.new("a,b\n"), filename: "x.csv", content_type: "text/csv")
+      export.mark_ready!(row_count: 1)
+    end
+  end
+
+  test "every export says who requested it, and a colleague in the same company can see it" do
+    colleague = create_admin(company: @company, name: "Daniel Osei", email: "daniel@example.com")
+    AssessmentExport.create!(company: @company, admin: @admin)
+    AssessmentExport.create!(company: @other_company, admin: @other_admin)
+    sign_in_as(colleague)
+
+    get exports_path
+
+    assert_equal [ "Maya Reyes" ], props[:exports].map { |export| export[:requested_by] }
+  end
+
+  test "a retry is attributed to the admin who pressed Retry, not the original requester" do
+    colleague = create_admin(company: @company, name: "Daniel Osei", email: "daniel@example.com")
+    completed
+    failed = AssessmentExport.create!(company: @company, admin: @admin)
+    failed.mark_failed!("error")
+    sign_in_as(colleague)
+
+    post retry_export_path(failed), headers: { "HTTP_REFERER" => exports_url }
+
+    assert_equal [ "Daniel Osei", "Maya Reyes" ], @company.assessment_exports.recent.map { |export| export.admin.name }
+  end
+
+  test "an export nobody has downloaded says so" do
+    ready_export
+    sign_in_as(@admin)
+
+    get exports_path
+
+    assert_equal 0, props[:exports].first[:download_count]
+    assert_nil props[:exports].first[:last_downloaded_at]
+  end
+
+  test "each download is counted, and the time of the last one is kept" do
+    export = ready_export
+    sign_in_as(@admin)
+
+    2.times do
+      get download_export_path(export)
+      assert_response :redirect
+    end
+    get exports_path
+
+    assert_equal 2, export.reload.download_count
+    assert_in_delta Time.current, export.last_downloaded_at, 5.seconds
+    assert_equal 2, props[:exports].first[:download_count]
+    assert_not_nil props[:exports].first[:last_downloaded_at]
+  end
+
+  test "a download that is refused is not counted" do
+    not_ready = AssessmentExport.create!(company: @company, admin: @admin)
+    expired = ready_export.tap { |export| export.update_columns(expires_at: 1.minute.ago) }
+    theirs = ready_export(company: @other_company, admin: @other_admin)
+    sign_in_as(@admin)
+
+    get download_export_path(not_ready)
+    get download_export_path(expired)
+    get download_export_path(theirs)
+
+    assert_equal [ 0, 0, 0 ], [ not_ready, expired, theirs ].map { |export| export.reload.download_count }
+  end
+
+  test "downloads clicked at the same moment are all counted, and the build heartbeat is untouched" do
+    export = ready_export
+    heartbeat = export.reload.updated_at
+
+    AssessmentExport.find(export.id).record_download!
+    AssessmentExport.find(export.id).record_download!
+
+    assert_equal 2, export.reload.download_count
+    assert_equal heartbeat, export.updated_at
+  end
+
   # ---- exports whose worker died --------------------------------------------
 
   test "an export nobody is working on shows as failed with a Retry, not as building forever" do
