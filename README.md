@@ -62,7 +62,7 @@ The [demo script](#demo-script-510-minutes) below is a ready-made tour.
 | Area | What works |
 |---|---|
 | Sign-in / sign-out | Password + CAPTCHA, server-side sessions that expire after 8 idle hours, rate limits, one generic error message |
-| Dashboard | Status chips with live counts, 7/30/90-day and custom date filters, paging, a detail drawer (`?selected=`), the score and its four sections |
+| Dashboard | A status bar and chips with live counts, 7/30/90-day and custom date filters, paging, a detail drawer (`?selected=`) with a five-way status chooser, the score and its four sections |
 | Change status | From the drawer. Aliases such as `comp` are normalized, unknown values are rejected, and the counts and score update immediately |
 | **New assessment** | Pick one of your employees or add one, choose a status, optionally enter the four section scores. Saved to your company only |
 | CSV export | Live match count, background build with real progress, ready / failed / expired states, retry, one-minute signed download. Six columns, no personal data |
@@ -242,7 +242,7 @@ HMAC reference such as `emp_a41f9c02d7e1`.
 | `ergocheck_consent` | remembers your choice (signed, 12 months) | strictly necessary |
 | `ergocheck_prefs` | remembers the dashboard status filter and date preset (signed, 90 days) | **only with your opt-in** |
 
-The banner offers *Accept all*, *Essential only* or *Customize*; **Cookie settings** in the sidebar reopens it.
+The banner offers *Accept all*, *Essential only* or *Customize*; **Cookie settings** in the account menu (the round initials button, top right) reopens it.
 Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" ticks on the Release plan page use
 `localStorage` and are likewise remembered only if you opted in.
 
