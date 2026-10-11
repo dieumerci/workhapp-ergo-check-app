@@ -68,7 +68,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 9. Quality gates (zero warnings)
 
-- [x] 9.1 Automated tests (271): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening, new assessment, seeds
+- [x] 9.1 Automated tests (272): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening, new assessment, seeds
 - [x] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
 - [x] 9.3 Browser walkthrough of every screen against the design screenshots
 - [x] 9.4 Production configuration verified by booting production mode: single database, Solid Queue worker building an export, SSL headers, CSP with nonce, no signed links in logs
@@ -112,6 +112,7 @@ Findings raised by an independent read-only reviewer and by the audit; full deta
 - [x] 12.12 `INTERVIEW_PREP.md` expanded into a detailed, code-level study guide (git-ignored)
 - [x] 12.13 Rate limits covered by tests (11) and a shared-counter bug fixed: export previews no longer use up the export budget
 - [x] 12.14 First Railway deploy failed (`The production database is not configured`): the `production:` block in `config/database.yml` was commented out. Fixed, with a readable boot error and tests that run without `DATABASE_URL`; the Railway guide lists the service settings to check
+- [x] 12.15 Second Railway deploy: an empty database plus the in-Puma job worker crashed on boot (`relation solid_queue_recurring_tasks does not exist`). The web process now prepares the database itself, tested by starting the real server against an empty database
 - [ ] 12.10 Push to GitHub: waiting for the owner's go-ahead (no remote is configured)
 
 ## Out of scope (quarantined)

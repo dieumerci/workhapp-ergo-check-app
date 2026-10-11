@@ -11,6 +11,7 @@ All notable changes, generated from the Conventional Commits history. Versioning
 - **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
 
 ### Fixes
+- **deploy:** run `db:prepare db:seed` when the web process boots, so a platform that skips the pre-deploy step no longer crashes the in-Puma job worker on an empty database; test the real server against an empty database
 - **deploy:** give production its own `database.yml` block (it was commented out), stop the boot with a readable message when `DATABASE_URL` is missing, and test it without the variable
 - **rate limits:** name each limit so counters don't collide (export previews were using up the hourly export budget), and test every limit against a real cache
 - **deploy:** `railway.json` runs one pre-deploy command, as Railway's schema requires, and a test guards it

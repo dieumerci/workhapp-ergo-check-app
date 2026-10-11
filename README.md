@@ -101,7 +101,7 @@ More help (Postgres not running, a blank page, the CAPTCHA) is in [`APP_GUIDE.md
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 271 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 272 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -270,7 +270,6 @@ walkthrough and every variable are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md); th
 | `ALLOW_DEMO_SEED` | `true` | for a demo with sample companies |
 | `DEMO_ADMIN_PASSWORD` | a long password you choose | **yes** whenever `ALLOW_DEMO_SEED=true` |
 | `SHOW_OPS_PAGES` | `true` | to show the Release plan and Safeguards pages |
-| `PORT` | `3000` | recommended, pins the port the domain points at |
 | `RAILWAY_RUN_UID` | `0` | only if you attach a Volume |
 
 `RAILS_ENV=production` is already set inside the Dockerfile. The full list with explanations, the S3 variables, tuning options and
@@ -283,7 +282,7 @@ troubleshooting are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md).
 3. **Add the database:** **New → Database → Add PostgreSQL**.
 4. Open the app service → **Variables**, and add the variables above (use the **Raw Editor** to paste them in one go).
 5. **Storage:** create a **Volume** (⌘K or right-click the canvas), attach it to the app service and set its mount path to `/rails/storage`.
-6. **Check the app service's Settings:** *Pre-deploy command* `bin/rails db:prepare db:seed`, *Start command* `bin/rails server -b ::` (or empty), *Builder* Dockerfile, *Healthcheck path* `/up`; and that **Variables** shows a real `DATABASE_URL` value. If the start command reads `bundle exec puma …`, that is the Heroku `Procfile`: replace it.
+6. **Check the app service's Settings** (the web process also creates its own tables at boot, so an empty database no longer stops it): *Pre-deploy command* `bin/rails db:prepare db:seed`, *Start command* `bin/rails server -b ::` (or empty), *Builder* Dockerfile, *Healthcheck path* `/up`; and that **Variables** shows a real `DATABASE_URL` value. If the start command reads `bundle exec puma …`, that is the Heroku `Procfile`: replace it.
 7. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#try-it-demo-sign-in).
 
 **Changing or rolling back:** pushing to the connected branch deploys again. To go back, open the service's **Deployments** list, use the menu on an earlier deployment and choose **Rollback** (it restores the image and the variables).

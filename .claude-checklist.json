@@ -399,6 +399,11 @@
           "done": true
         },
         {
+          "id": "12.15",
+          "title": "Second Railway deploy: an empty database plus the in-Puma job worker crashed on boot. The web process now prepares the database itself, tested by starting the real server against an empty database",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

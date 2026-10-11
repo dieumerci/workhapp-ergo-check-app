@@ -31,6 +31,23 @@ threads threads_count, threads_count
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 
+# Create or migrate the database before the web server (and the job worker below) starts.
+#
+# Not every platform runs a pre-deploy step, and a custom start command replaces the image's
+# entrypoint, so Puma can be started against a brand-new, empty database. The job worker plugin
+# below queries its own tables on boot and, finding none, crashes and takes Puma down with it
+# ("relation solid_queue_recurring_tasks does not exist ... Solid Queue has gone away").
+#
+# `db:prepare` is idempotent and Rails serialises concurrent migrations with an advisory lock,
+# so running it again after a pre-deploy step costs about a second. `db:seed` creates nothing in
+# production unless ALLOW_DEMO_SEED=true. Set SKIP_DB_PREPARE=1 where schema changes must only
+# ever happen in a separate release step.
+# (Plain Ruby only: this file is read before Rails, so ActiveSupport's `present?` does not exist yet.)
+if ENV["RAILS_ENV"] == "production" && !ENV["DATABASE_URL"].to_s.empty? && ENV["SKIP_DB_PREPARE"].to_s.empty?
+  system(File.expand_path("../bin/rails", __dir__), "db:prepare", "db:seed") ||
+    abort("db:prepare db:seed failed, so the web server was not started")
+end
+
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
