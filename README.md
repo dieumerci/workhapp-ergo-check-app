@@ -10,11 +10,16 @@ old Rails app, without rewrites:
 | **2. A faster dashboard with a correct score** | Server-side filtering and paging, two measured indexes, one grouped count instead of N+1 queries. Score is always the rounded average of four section scores, or an honest "Not scored yet". |
 | **3. Status normalization** | New and updated records only ever hold `pending`, `in_progress`, `completed`, `needs_follow_up` or `archived`. The historical backfill is **designed, tested and guarded, but not executed**. |
 
-Two enhancements follow directly from those tasks: an **export audit trail** (who requested each export, how often it was
-downloaded) and a **legacy-data note** on the dashboard (how much of the history still uses old status spellings, shown instead of hidden).
+Enhancements that follow from those tasks:
+- an **export audit trail** (who requested each export, how often it was downloaded);
+- a **legacy-data note** (how much of the history still uses old status spellings, shown instead of hidden);
+- **search** (by employee, department or assessment code), company-scoped, never logged, never part of an export;
+- a **redesigned interface** (floating navigation, a design system in tokens, mobile-first sheets, a snow-white canvas);
+- an optional **assistant** ("ask in plain English"), off unless you set a key, that can only set filters or propose an export.
+
 Plus three extras beyond the brief: a **self-hosted CAPTCHA** on sign-in, a **cookie-consent** feature, and a small
-**New assessment** form so the app can be explored end to end. How I approached a ten-year-old application, and why Rails,
-PostgreSQL and Inertia suit it, is in `SOLUTION.md` §1.1.
+**New assessment** form so the app can be explored end to end. How I approached a ten-year-old application, why Rails,
+PostgreSQL and Inertia suit it, how I would upgrade one, and what I would build next are in `SOLUTION.md` (§1.1, §13 to §16).
 
 **Design, measurements and the release and rollback plan:** [`SOLUTION.md`](SOLUTION.md).
 
@@ -25,7 +30,7 @@ PostgreSQL and Inertia suit it, is in `SOLUTION.md` §1.1.
 ## Stack
 
 Ruby 3.3 · Rails 8.1 · PostgreSQL · Inertia.js 3 · React 19 · TypeScript · Vite 8 · Tailwind CSS 4 ·
-Active Storage · Solid Queue · Minitest.
+Active Storage · Solid Queue · Minitest. Fonts are self-hosted (Instrument Sans and Serif, IBM Plex Mono).
 
 ## Try it: demo sign-in
 
@@ -62,6 +67,8 @@ The [demo script](#demo-script-510-minutes) below is a ready-made tour.
 | **New assessment** | Pick one of your employees or add one, choose a status, optionally enter the four section scores. Saved to your company only |
 | CSV export | Live match count, background build with real progress, ready / failed / expired states, retry, one-minute signed download. Six columns, no personal data |
 | Exports page | History of the company's exports and their state, who requested each one, and how often it was downloaded |
+| Search | Find assessments by part of an employee's name, a department or an `A-` code; several words at once; `/` or Cmd/Ctrl+K to focus it. Counts, pager and the legacy note follow the search; it is never logged, never remembered and never part of an export |
+| Ask in plain English | Optional (see "The assistant" below): a sentence becomes filters, or an export you review and confirm. Hidden unless configured |
 | Legacy-data note | Under the filters: "42 of 64 use a standard status" with a progress bar, which older spellings were found and how they are shown. Hidden when the data is clean |
 | Cookies | Consent banner, *Cookie settings*, an optional cookie only after opt-in |
 | Release plan and Safeguards | Internal pages: the status mapping with a live tester, the eight release steps, and the log-filtering proof |
@@ -109,12 +116,27 @@ In development, background jobs run in-process, so exports finish without a sepa
 | "too many attempts" | rate limits protect sign-in (10 tries per address per 3 minutes, 6 per account per 10 minutes): wait a few minutes |
 | an export stays *Building* | in production the job worker must run: `SOLID_QUEUE_IN_PUMA=1`, or `bin/jobs` as a separate process; a stuck export is marked stalled after 10 minutes and can be retried |
 
+### The assistant (optional)
+
+*Ask in plain English* turns a sentence such as "completed in Warehouse, last 30 days" or "export September" into the dashboard's own filters, or into an
+export you still review and confirm. It is **off unless you configure it**, so nothing changes for anyone who does not want it.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...   bin/dev     # or OPENAI_API_KEY=sk-...   (ASSISTANT_PROVIDER and ASSISTANT_MODEL are optional)
+ASSISTANT_PROVIDER=rules       bin/dev     # no key: a few plain rules, no AI, nothing leaves the server
+```
+
+It is deliberately narrow, because the data is health data: the model is sent only your question, today's date, the allowed values and your department
+names (never an employee name, e-mail, answer, score or assessment); it can only set filters or propose an export, and everything it returns is validated;
+it cannot read data, write data or create an export; the question is filtered from the logs. The provider calls are tested against a stand-in for the
+network and **have not been run against the live APIs**; the offline mode was exercised end to end. Details in `SOLUTION.md` §14.
+
 ### Quality gates
 
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 287 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 350 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -233,6 +255,9 @@ Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" t
 | Cookies | `app/models/cookie_preferences.rb`, `app/controllers/cookie_consents_controller.rb`, `app/javascript/components/CookieConsent.tsx` |
 | Statuses | `app/models/status.rb`, `app/models/assessment.rb`, `app/models/status_backfill.rb`, `lib/tasks/status.rake`, `db/release_plan/` |
 | Dashboard | `app/models/assessment_dashboard.rb`, `assessment_row.rb`, `score_calculator.rb`, `app/javascript/pages/assessments/` |
+| Search | `app/models/assessment_search.rb`, `AssessmentDashboard`, `app/javascript/components/assessments/SearchField.tsx`, `Highlight.tsx` |
+| Assistant | `app/models/assistant.rb`, `app/models/assistant/` (agent, tools, clients), `app/controllers/assistants_controller.rb`, `AskAssistant.tsx` |
+| Design system and layout | `app/javascript/entrypoints/application.css` (tokens), `layouts/`, `components/ui.tsx`, `components/Dialog.tsx` |
 | New assessment | `app/models/new_assessment.rb`, `AssessmentsController#create`, `app/javascript/components/assessments/NewAssessmentDialog.tsx` |
 | Export | `app/models/assessment_export.rb`, `app/models/assessment_exports/`, `app/jobs/`, `app/controllers/exports_controller.rb`, `app/javascript/components/exports/` |
 | Performance | `db/migrate/*_add_assessments_dashboard_indexes.rb`, `lib/tasks/perf.rake`, `benchmarks/` |
@@ -307,6 +332,7 @@ RAILWAY_RUN_UID=0
 | `SHOW_OPS_PAGES` | optional | Shows the internal *Release plan* and *Safeguards* pages (404 in production otherwise). |
 | `RAILWAY_RUN_UID` | with a Volume | The image runs as a non-root user, which cannot write to a freshly mounted volume; Railway's documented fix is to run as root. |
 | `EXPORT_MAX_SECONDS` | optional | How long an export may run before it fails with "try a narrower range" (default 300). |
+| `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | optional | Turns on the assistant (see "The assistant" above). Without one the assistant does not exist. Set it as a Railway variable, never in the repository. |
 | `RAILS_LOG_LEVEL` | optional | `info` by default. Never `debug` in production: it logs SQL and parameters for health data. |
 
 `RAILS_ENV=production` is already set inside the Dockerfile.
@@ -348,13 +374,14 @@ An export is a CSV written through Active Storage. A Railway container's disk is
 
 1. **Tenancy (1 min).** Sign in as Northwind (Maya): header says "Showing your company only". Sign out, sign in as Harbor & Pine (Jonas):
    a different, smaller, clean dataset with no legacy note. Mention the session, not a parameter, decides the company.
-2. **Dashboard (2 min).** Chips with counts, presets, From/To, paging; point at the legacy note ("42 of 64 use a standard status");
+2. **Dashboard (2 min).** The status bar and chips with counts, presets, From/To, paging; **search** "priya" (counts, pager and highlight follow); point at the legacy note ("42 of 64 use a standard status");
    open a row (the URL carries `?selected=`), change its status, watch the toast, the chip counts and the score react. Show a "Not scored yet" row and why.
-3. **New assessment (1 min).** Press *New assessment*, add an employee, choose *Completed*, enter four scores, create it, and see the score the dashboard computes.
-4. **Export (3 min).** Export CSV from a filtered view: locked company, live match count, six columns, "Left out".
+3. **Assistant (30 s, optional).** With `ASSISTANT_PROVIDER=rules` (or a key), ask "needs follow-up in Finance, last 30 days": the filters apply, **Undo** reverts them. Ask "export September": nothing is created until you press *Request export*.
+4. **New assessment (1 min).** Press *New assessment*, add an employee, choose *Completed*, enter four scores, create it, and see the score the dashboard computes.
+5. **Export (3 min).** Export CSV from a filtered view: locked company, live match count, six columns, "Left out".
    Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry), who requested each export and how often it was downloaded.
-5. **Performance (1–2 min).** `bin/rails perf:benchmark` output, and the EXPLAIN difference between the design's index and the one shipped.
-6. **Status plan (2 min).** Release plan page: type `comp`, `n/a`, `xyz` in the tester; walk the eight steps and which are live vs window;
+6. **Performance (1–2 min).** `bin/rails perf:benchmark` output, and the EXPLAIN difference between the design's index and the one shipped.
+7. **Status plan (2 min).** Release plan page: type `comp`, `n/a`, `xyz` in the tester; walk the eight steps and which are live vs window;
    `bin/rails status:backfill:report`.
-7. **Safeguards (1 min).** The before/after log line is produced by the real filter.
-8. **Code tour.** `Current.company`, `AssessmentDashboard`, `AssessmentExports::Builder`, `Status`, `StatusBackfill`.
+8. **Safeguards (1 min).** The before/after log line is produced by the real filter.
+9. **Code tour.** `Current.company`, `AssessmentDashboard`, `AssessmentExports::Builder`, `Status`, `StatusBackfill`.

@@ -9,7 +9,9 @@ I followed throughout, from the brief: *operate with restraint*. Targeted, safe 
 [6 Task 3: statuses](#6-task-3--normalizing-statuses-with-a-safe-release-plan) · [7 Sign-in, CAPTCHA, cookies](#7-sign-in-captcha-and-cookies) ·
 [8 Departures from the design](#8-where-i-departed-from-the-design-and-why) · [9 Trade-offs](#9-trade-offs-and-what-i-would-do-next) ·
 [10 Build log](#10-build-log-the-steps-and-why-each-was-done-this-way) · [11 Verification](#11-how-this-was-verified-and-what-was-not) ·
-[12 Independent review](#12-the-independent-review-and-what-it-changed)
+[12 Independent review](#12-the-independent-review-and-what-it-changed) ·
+[13 The interface and search](#13-the-interface-search-and-what-changed-on-screen) · [14 The assistant](#14-the-assistant-ask-in-plain-english) ·
+[15 Upgrading an old app](#15-upgrading-a-ten-year-old-rails-app-how-i-would-do-it) · [16 What to build next](#16-what-i-would-build-next-and-why)
 
 ---
 
@@ -21,7 +23,7 @@ I followed throughout, from the brief: *operate with restraint*. Targeted, safe 
 | **Task 2** | One grouped `COUNT` plus one page of ten rows replaces "load everything, then one query per row". Two measured indexes. Score is the rounded mean of four sections or an explicit "Not scored yet". | A replay of the inherited behaviour took **94.5 s and 300,001 queries** for a 300k-row company; the new page takes **23 ms and 2 queries**. |
 | **Task 3** | `Status` is the single definition; aliases are mapped and unknown values rejected on save. The backfill is guarded, batched, resumable and reversible, and **was not run**. | A test proves the SQL mapping agrees with the Ruby one on awkward input; the plan and rollback are in §6. |
 
-Two small enhancements follow from the tasks rather than from the extras: an **audit trail on exports** (who requested each one, how often it was fetched, §4.6) and a **legacy-data note** on the dashboard (how much of the history is still non-standard, at no extra query, §5.6). §1.1 explains the approach to a ten-year-old application that ties the work together.
+Beyond the tasks I made **dashboard search**, a **redesigned interface**, and an optional **AI assistant** (§13, §14), and wrote down **how I would upgrade a ten-year-old Rails app** and what I would build next (§15, §16). Two small enhancements follow from the tasks rather than from the extras: an **audit trail on exports** (who requested each one, how often it was fetched, §4.6) and a **legacy-data note** on the dashboard (how much of the history is still non-standard, at no extra query, §5.6). §1.1 explains the approach to a ten-year-old application that ties the work together.
 
 Things I deliberately did **not** do: rewrite the module, add a second UI framework, or run the historical backfill
 (the brief says *plan only*).
@@ -232,6 +234,16 @@ It appears only when there is something to say (a company with clean data sees n
 - **It never echoes an unrecognised stored value.** Only spellings from the closed alias list (case and spaces folded) are named; an unknown value is counted, not shown, because nobody knows what ten years of a free column contain. A test stores a sentence in the status and asserts it is absent from the response.
 - **One definition.** `Status.legacy_kind` (`standard`, `blank`, `alias`, `unknown`) sits beside `normalize`, and a test pins the two together.
 
+### 5.7 Search
+
+Finding one person's assessment meant paging through the list, so the dashboard has a search box. It finds assessments by part of an employee's name, a department, or an assessment code (`A-10708`), and several words at once (`priya finance`: every word has to match, in any order), case-insensitively.
+
+- **Same rules as everything else.** `AssessmentSearch` narrows a scope that is already the signed-in company's and looks only through that company's employees, so it cannot find, or reveal the existence of, another tenant's record. It is capped (4 words, 64 characters), drops control characters, treats `%` and `_` typed by a person as plain characters, and ignores an array or hash parameter.
+- **The page stays consistent and fast.** The chip counts, the pager and the legacy-data note describe the search, and the page still makes **two assessment queries** (a test asserts it). Measured on a 100,000-row company with 4,000 employees: **6 to 14 ms** for every search shape tried (name, department, code, one letter, search plus status plus date range), against 17 ms for the unfiltered page. It uses the existing `company_id` and `employee_id` indexes; a trigram index would be the next step only if a company's employee table grew into the hundreds of thousands.
+- **What is typed is personal data.** It reaches PostgreSQL as a bind parameter, never as text in the SQL, and the bind is named `search_term`, which (with the `q` request parameter) is on the log filter list, so the request line, the parameters and the SQL log all show `[FILTERED]`. A log-reading test searches a distinctive name and asserts it appears nowhere. It is never remembered, not even in the consented filter cookie.
+- **A search is not part of an export.** The brief limits exports to exactly two filters (date range and status); a test sends `q` to the preview and create endpoints and asserts it is ignored, and the export dialog says so.
+- **Behaviour.** The box waits for a pause in typing, never overwrites newer typing with a slow response, clears with Escape, is focused from anywhere with `/` or Cmd/Ctrl+K, and highlights the match with plain React text nodes (nothing a person typed is ever treated as HTML). Searches are rate limited (180 a minute, with their own counter) with a polite message.
+
 ## 6. Task 3 — normalizing statuses with a safe release plan
 
 ### 6.1 The write path (implemented)
@@ -392,6 +404,8 @@ less than it appears to; it is defence in depth, not the lock. If stronger bot r
 - **Local storage in production is unsafe on ephemeral disks**: attach a volume or use S3. S3 is wired (`config/storage.yml`) and exercised offline by `test/s3_storage_test.rb` with the AWS SDK's stubbed client and real signing, but never run against a real bucket. Railway's own Buckets and Cloudflare R2 need a custom endpoint, which is not configurable here.
 - **The CAPTCHA** is the weakest control in the app against a determined attacker, especially with the accessible text alternative; rate limiting (per address and per account) and the generic error carry the weight.
 - **New assessment is not an audit-grade write path.** It does not record who created an assessment, and there is no edit or delete for employees or assessments (an assessment is retired by archiving it). If the product needs those, an audit trail comes first.
+- **The assistant's provider calls have never run against the live APIs** (§14): they are tested against a stand-in for the network. The offline rules mode was exercised end to end.
+- **The front end has no automated tests** beyond strict `tsc`, the production build and the Rails integration tests of what the server sends. It was checked by hand in a browser at 375, 390, 768, 1024 and 1440 px. Component tests for the dialogs' focus handling and the search box's debounce are the first I would add.
 - **Not done:** a per-download audit row (who, when, from where; §4.6 records only the count), per-admin permissions beyond "company admin", self-service sign-up and password reset, admin management, mobile polish beyond a working responsive layout, internationalisation.
 
 ## 10. Build log: the steps and why each was done this way
@@ -434,6 +448,9 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 31 | Repository trimmed to the brief | `0334fda` | README and SOLUTION only (other notes are ignored by Git); removed the unused Kamal scaffolding and a `railway.json` Railway does not read; removed a CI job that ran zero system tests and so always failed |
 | 32 | Export audit trail | `f6d19d1` | who requested each export and how often it was downloaded (§4.6); six tests and a mutation check |
 | 33 | Legacy data note | `98fb6cf` | the dashboard says how much of the data is still non-standard, at no query cost (§5.6); seven tests and two mutation checks |
+| 34 | Dashboard search | `9ef3ca3` | find one person's assessment; company-scoped, bind-parameterised, never logged, never in an export (§5.7); 22 tests |
+| 35 | Interface redesign | `497f082` | a design system in tokens and every screen, dialog and state restyled, floating navigation, snow-white canvas (§13); no behaviour changed |
+| 36 | The assistant | `bd3acee` | "ask in plain English", off unless configured, narrow by design (§14); 41 tests |
 
 **Defects found by testing, not by reading — all fixed** (the second batch came from the independent review, §12): the design's index not helping the page; a `TimeBudgetExceeded` constant that would have raised `NameError` in the job's `rescue` in production (Zeitwerk); Rails' loose boolean cast
 granting cookie consent for `"yes please"`; the preview endpoint losing its date error to `valid?`; a half-applied migration that could not be reversed; a parallel test race on a cold Vite build; npm and Ruby warnings; a dev-only redirect that also ran in
@@ -441,11 +458,11 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 287 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
-with no errors; the Vite production build with no warnings; every screen exercised in a browser against the design's screenshots; production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
+**Verified:** 350 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, search, the assistant's validation and its provider adapters, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+with no errors; the Vite production build with no warnings; every screen exercised in a browser at 375, 390, 768, 1024 and 1440 px with no horizontal overflow, the search and the assistant (offline mode) driven end to end; text contrast computed for every colour pair (5.5 to 16.6 on the canvas); production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
-**Not verified, so do not assume:** the Docker build (no Docker where this was written); S3 against a real bucket (only the stubbed-client tests); the export file store on a Railway volume; a real Heroku release; behaviour on a production-sized table beyond the 300k/1.2M-row benchmark; the status backfill on real data (by design).
+**Not verified, so do not assume:** the assistant against the live Anthropic and OpenAI APIs (no key was available; the adapters are tested against a stand-in for the network); the Docker build (no Docker where this was written); S3 against a real bucket (only the stubbed-client tests); the export file store on a Railway volume; a real Heroku release; behaviour on a production-sized table beyond the 300k/1.2M-row benchmark; the status backfill on real data (by design).
 
 ## 12. The independent review, and what it changed
 
@@ -465,6 +482,7 @@ before fixing and now has a test that fails without the fix.
 | 8-hex employee references; `"0x1A"` scored as 26 | collisions at ~50,000 employees; a wrong number | 12 hex; decimal digits only |
 | Dialog focus escape, no inert background, no error boundary | accessibility and resilience | portal + `inert`, topmost-only keys, error boundary |
 | No non-visual CAPTCHA alternative | blind admins could not sign in | accessible text question, stricter throttle |
+| *(mine, found while testing the assistant in a browser)* the page content was keyed on the raw URL path, so the first filter change that moved the page from `/` to `/assessments` remounted it and dropped its local state (an open panel, a typed question) | an open panel closed itself and the answer disappeared the moment it applied its own filters | `/` and `/assessments` are one key |
 | *(mine, found by the final gate)* the storage guard raised `NameError` in an initializer | every production boot would have failed; dev and test skip that branch, so 228 green tests missed it | `after_initialize`, plus a test that boots real production mode in a subprocess |
 | *(mine, found by the first sign-in on the hosted copy)* the production seed gate accepted only the exact string `true`, and a demo admin's password was set only when the account was first created | a variable like `True`, `1` or `"true"` silently skipped the demo data (no admins, so every sign-in said "We couldn't sign you in"), and changing `DEMO_ADMIN_PASSWORD` later never took effect; the seeds also printed the demo password into the deploy log | the gate accepts `true`, `1`, `yes`, `on` (any case, spaces and quotes ignored) and the skip message shows what the variable contained; demo accounts always converge to the configured password; production never prints it; 5 new seed tests |
 | *(mine, found by the second Railway deploy)* production could be started against an **empty** database: the pre-deploy step did not run and a custom start command replaces the image's entrypoint | the job worker inside Puma queried `solid_queue_recurring_tasks` on boot, crashed ("relation does not exist"), and took Puma down with it | `config/puma.rb` runs `db:prepare db:seed` before anything starts (idempotent; opt out with `SKIP_DB_PREPARE=1`); `test/first_boot_test.rb` starts the real Puma against a new empty database and checks it stays healthy. Also corrected my own advice to set `PORT=3000`: Railway supplies `PORT` (8080) and Puma already listens on it |
@@ -476,3 +494,89 @@ before fixing and now has a test that fails without the fix.
 One reviewer finding I **rejected**: that a computable score is hidden for legacy blank-status rows. That is the design's rule ("Pending… say Not scored yet"), and those exact rows are what the backfill audit lists for a human; I documented it instead of changing it.
 
 **What this taught me about my own process:** green tests and a clean linter said nothing about the CAPTCHA being replayable, because my tests replayed *the browser's* behaviour (a cookie jar that updates), not an attacker's; the replay tests now send the *original* cookie. And a green suite said nothing about production boot, because test and development never run production-only code; the gate has to include a real production-mode boot on the final commit, and now the suite does too.
+
+## 13. The interface, search and what changed on screen
+
+The brief asks for restraint, and the three tasks are small. The interface is where I spent the extra effort, because a ten-year-old product is usually judged on how it feels: it should look like a product from this decade, work on a phone, and be usable without a mouse.
+
+**Direction: calm, editorial, spatial.** A health product should feel trustworthy and quiet, not like a default utility-class dashboard. The design system lives in tokens at the top of `app/javascript/entrypoints/application.css`; components use only the tokens, never raw colours.
+
+| Decision | What and why |
+|---|---|
+| **Snow-white canvas, neutral greys** | The background is a clean, near-white `#fafbfa` with pure-white surfaces, and every grey is neutral, not cream. An earlier cream canvas read as beige on a laptop with True Tone; neutral greys stay white under any display tint. One token (`--color-canvas`) changes it to pure white. |
+| **Type** | Instrument Serif for page titles and big numbers, Instrument Sans for the interface, IBM Plex Mono for codes. All self-hosted (one new package, `@fontsource/instrument-serif`, OFL licence), so a health product makes no third-party font requests. A short scale: display, title, body, small, eyebrow. |
+| **Colour** | One brand accent (pine) and the five status hues, each with a text "ink" that passes 4.5:1 on white and on the canvas (computed: 5.5 to 16.6). Status is a marker plus a label, never colour alone. |
+| **Open rows, not boxed cards** | Lists and tables sit on the page with hairlines instead of a box around every group; a status is a dot and a word, not a filled sticker. Containers are used only where they mean something (dialogs, the Safeguards tiles). |
+| **Floating navigation** | A glass pill on wide screens, a floating tab bar within thumb reach on phones, and an account menu (name, company, "Your company only", cookie settings, sign out). Glass is used only for floating controls, never for content or inputs. |
+| **One signature** | The whole view as a single bar split by status, above the filter chips. It is a picture of what the chips already say in words, so it is hidden from assistive technology. |
+| **Sheets** | Dialogs are centred sheets on large screens and bottom sheets on phones; the detail drawer floats inset from the edges, with a five-way status chooser, the score in serif, and the four section bars. |
+| **Motion** | 150 to 300 ms, one easing, nothing that shifts layout, switched off under `prefers-reduced-motion`. |
+| **Touch and keyboard** | 44 px targets on touch screens, visible focus rings, a full keyboard path, `/` or Cmd/Ctrl+K to search, Escape to close. |
+
+**Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 350 tests, the production build with no warnings, and a manual pass at five widths.
+
+**What this does not include:** dark mode, internationalisation, and automated front-end tests (see §9 and §16).
+
+## 14. The assistant ("Ask in plain English")
+
+A sentence such as *"completed in Warehouse, last 30 days"* or *"export September"* becomes the filters the page already has, or an export the person still reviews and confirms. It is the one place an AI model removes work here (clicks), and the rest of the application stays deterministic.
+
+**It is off unless configured.** With no key and no `ASSISTANT_PROVIDER`, there is no button and the endpoint answers 404. `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` turns it on (Anthropic wins if both are set; `ASSISTANT_PROVIDER` and `ASSISTANT_MODEL` choose). `ASSISTANT_PROVIDER=rules` is an **offline mode**: a few plain rules read a status, a period, a month, a department and the word "export", and return the same tool calls a model would, with no AI and no network (it says so on screen). It lets the feature be tried, demonstrated and tested without a key.
+
+**Built for health data, so it is deliberately narrow.**
+
+| Concern | What the code does |
+|---|---|
+| What the model sees | The question, today's date, the allowed values, and the company's department names (only ones that look like names). **Never** an employee name, e-mail, answer, score or assessment row. A test creates all of those and asserts none appears in anything sent. The API key stays on the server. |
+| What it can do | Two tools only: `set_filters` and `prepare_export`. Their output is validated like any request: statuses and presets from the allowed lists; dates parsed, ordered and bounded; a department only if it is one of the company's own (a person's name is dropped); the first call of each tool; unknown tools ignored. It cannot read data, write data, or create an export. |
+| Who decides | It proposes; the person confirms. Filters appear as a chip with **Undo**; an export opens the normal export dialog prefilled, and nothing is created until *Request export*. |
+| The question is personal data | The `message` parameter is filtered from the logs; failures are logged by class only; no error text carries the question, the key or a response body; questions are rate limited per admin. |
+| Prompt injection | The only untrusted text is the person's own question (and department names, which are filtered by shape). The model has no data to leak and no tool that acts beyond what the person could do by hand. |
+| Failure | One HTTP place with short timeouts and no retries; friendly messages for 401, 403, 429, 5xx, an unreadable reply and a dead network. |
+
+**Trade-offs and honesty.** The provider calls (Anthropic Messages with tool use, OpenAI Chat Completions with function calling, no new gem) are **tested against a stand-in for the network and have not been run against the live APIs**, because no key was available where this was written; the offline mode was exercised end to end in a browser. A model can misread a request, which is why the result is shown, undoable and never destructive. Sending a question to a third party is a real decision for a health product: the screen says who receives it, and the safe default is off.
+
+## 15. Upgrading a ten-year-old Rails app: how I would do it
+
+The brief describes an app that works, written by someone who has left, probably on an old Ruby and an old Rails. The goal is not "be current"; it is to **make change cheap and safe again**, without a rewrite and without freezing the business. This is the order I would work in. The repository demonstrates the habits at small scale (§1.1).
+
+**0. Look before touching (a day).** `ruby -v`, the Rails version in `Gemfile.lock`, `bundle outdated`, `bundle audit`, `config.load_defaults`, the database version, the deploy pipeline, whether CI exists and is green, how long a deploy takes, whether there is error tracking. Count deprecation warnings. Write down what is *not* known.
+
+**1. A safety net first.** Upgrades fail where behaviour is unspecified. Before any version change, add characterisation tests around the flows that earn money or hold risk (here: tenancy, the export, the dashboard, sign-in), run CI on every push, and add error tracking and a health check. A pending upgrade with no tests is a guess.
+
+**2. Ruby, then Rails, one step at a time, never skipping.**
+- Ruby in small hops (for example 2.x to 2.7, then 3.0, 3.2, 3.3), because Ruby 3 changed keyword arguments and every hop surfaces a different class of break. `ruby -W:deprecated` and a RuboCop target version find most of it.
+- Rails one minor at a time (for example 4.2, 5.2, 6.1, 7.0, 7.2, 8.0, 8.1): `rails app:update`, read the diff, fix deprecations (run tests with deprecations set to raise), then move `load_defaults` up gradually. Known milestones: the Zeitwerk autoloader (6.0, check with `zeitwerk:check`), strong parameters, encrypted credentials, Active Storage replacing attachment gems, and Solid Queue and Solid Cache (8.0) removing the need for Redis.
+- **Dual-boot** (`Gemfile` and `Gemfile.next`, selected by an environment variable) so CI runs both versions and the app stays releasable at every step.
+- Every step is its own release with its own rollback; none is combined with a feature.
+
+**3. Dependencies.** Remove dead gems first; replace abandoned ones; automate with Dependabot and `bundler-audit` in CI (both are in this repository). Prefer the framework's built-ins when they have caught up, because each removed gem is one fewer thing to upgrade.
+
+**4. The database, separately.** Upgrade PostgreSQL on its own schedule (on Heroku-like platforms, a follower promotion or `pg:upgrade`; elsewhere dump and restore into the new version, rehearsed on a copy). Keep schema changes out of upgrade releases, and use the same expand-then-contract pattern as the status release (§6): additive change, backfill in batches, validate, remove the old thing last.
+
+**5. The front end, one page at a time.** Replace the asset pipeline (Sprockets or Webpacker) with Vite, then move screens to React with **Inertia**, which lets an old server-rendered page and a new one live in the same app (the strangler pattern), with auth, CSRF and the tenant rule staying in Rails. Add TypeScript where it protects a contract (the props), strict from the first file.
+
+**6. Operations.** A reproducible build (a `Dockerfile` or buildpacks), configuration in environment variables, a health check, a boot-time database prepare, and a runbook. Measure p95 latency, error rate, boot time, deprecation count, vulnerabilities and CI duration before and after, so "better" is a number.
+
+**What I would tell the team.** A small app with tests is roughly a day or two per Rails minor; the same app without tests is mostly the cost of writing them. Do not upgrade and add features in the same release. Keep the old Ruby and Rails in CI until production has moved, then delete them. Write down every decision in the pull request that makes it.
+
+## 16. What I would build next, and why
+
+Ordered by value to a company admin, each with the reason and the smallest first step. None is built; the ones that are built are marked.
+
+| Idea | Why | First step |
+|---|---|---|
+| **Search** (built, §5.7) | Finding one person is the most common task | done |
+| **Legacy-data note and export audit trail** (built, §5.6, §4.6) | Makes the old data visible; answers "who exported it?" | done |
+| **Ask in plain English** (built, §14) | Removes clicks, behind a safe boundary | next: "explain this score" using only the four section numbers |
+| **Saved views** | Admins repeat the same filters (for example "follow-ups this month"); a view is a name for a URL | a `saved_views` table per admin storing the filter parameters, and a menu |
+| **A command palette** (Cmd-K) | One keyboard surface for search, "new assessment", "export" and navigation | extend the existing search box into a list of actions |
+| **Bulk status change, with undo** | Archiving or following up on many rows one by one is slow | row checkboxes, one PATCH for the selection, an undo toast |
+| **Status history** | Who changed a status and when; the same audit instinct as exports | a `status_changes` table written in the model callback |
+| **Reminders** | Pending assessments older than N days should nudge someone | a recurring Solid Queue job and a mailer |
+| **Trends** | Is the share of "needs follow-up" going down? | a monthly snapshot table, one small chart |
+| **Scheduled exports** | Teams ask for the same export every month | a recurring job reusing the existing builder |
+| **Row-level security in PostgreSQL** | A second tenant guard behind the application one | a policy per table keyed on a session setting |
+| **Dark mode** | Expected on a modern product | tokens already centralised: a second set of values |
+| **Two-factor sign-in, SSO** | The honest next step beyond a CAPTCHA | adopt Devise or the Rails authentication generator at that point (§7) |
+| **Front-end tests** | The least-covered layer | component tests for the dialog focus handling and the search debounce |
