@@ -5,6 +5,7 @@ class SeedsTest < ActiveSupport::TestCase
     capture_io { load Rails.root.join("db/seeds.rb") }
     @northwind = Company.find_by!(name: "Northwind Logistics")
     @harbor = Company.find_by!(name: "Harbor & Pine Clinics")
+    @summit = Company.find_by!(name: "Summit Physio Group")
   end
 
   test "Northwind reproduces the design's dataset" do
@@ -18,6 +19,17 @@ class SeedsTest < ActiveSupport::TestCase
     assert_equal 24, @harbor.assessments.count
     assert_equal 1, @harbor.admins.count
     assert_empty @harbor.assessments.where(employee_id: @northwind.employees.select(:id))
+  end
+
+  test "a third tenant adds more data without touching the other two" do
+    assert_equal 40, @summit.assessments.count
+    assert_equal 1, @summit.admins.count
+    assert_empty @summit.assessments.where(employee_id: (@northwind.employees.pluck(:id) + @harbor.employees.pluck(:id)))
+    assert_equal 5, @summit.assessments.map { |assessment| Status.classify(assessment.status) }.uniq.size
+  end
+
+  test "Northwind has two admins who share one company" do
+    assert_equal %w[daniel.osei@northwind.example maya.reyes@northwind.example], @northwind.admins.order(:email).pluck(:email)
   end
 
   test "legacy mess is present so the dashboard and export have something to cope with" do
@@ -36,7 +48,32 @@ class SeedsTest < ActiveSupport::TestCase
     end
   end
 
-  test "demo admins can authenticate" do
-    assert Admin.authenticate_by(email: "maya.reyes@northwind.example", password: DemoData::DEMO_PASSWORD)
+  test "every demo admin can authenticate" do
+    %w[maya.reyes@northwind.example daniel.osei@northwind.example jonas.weber@harborpine.example aisha.bello@summitphysio.example].each do |email|
+      assert Admin.authenticate_by(email: email, password: DemoData::DEMO_PASSWORD), "#{email} should be able to sign in"
+    end
+  end
+
+  # ---- production --------------------------------------------------------
+
+  test "production skips the demo data quietly unless ALLOW_DEMO_SEED=true" do
+    Admin.where(email: "aisha.bello@summitphysio.example").delete_all
+
+    output, = capture_io { in_production { load Rails.root.join("db/seeds.rb") } }
+    assert_match(/Skipping demo data in production/, output)
+    assert_nil Admin.find_by(email: "aisha.bello@summitphysio.example")
+
+    capture_io { in_production(allow: "true") { load Rails.root.join("db/seeds.rb") } }
+    assert Admin.find_by(email: "aisha.bello@summitphysio.example")
+  end
+
+  private
+
+  def in_production(allow: nil)
+    previous = ENV["ALLOW_DEMO_SEED"]
+    allow ? ENV["ALLOW_DEMO_SEED"] = allow : ENV.delete("ALLOW_DEMO_SEED")
+    Rails.env.stub(:production?, true) { yield }
+  ensure
+    previous ? ENV["ALLOW_DEMO_SEED"] = previous : ENV.delete("ALLOW_DEMO_SEED")
   end
 end

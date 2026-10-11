@@ -4,9 +4,12 @@
 # same deterministic generator, so the dashboard shows 64 assessments split
 # 6 pending / 10 in progress / 29 completed / 14 needs follow-up / 5 archived.
 #
-# On top of that a second tenant (Harbor & Pine Clinics) proves isolation, and
-# a sprinkling of legacy mess ("comp", "done", nil, "", string scores, a
-# missing section) shows how the dashboard and export cope with real history.
+# On top of that two more tenants (Harbor & Pine Clinics, Summit Physio Group)
+# prove isolation, Northwind has a second admin to show two people sharing a
+# company, and a sprinkling of legacy mess ("comp", "done", nil, "", string
+# scores, a missing section) shows how the dashboard and export cope with real
+# history. Northwind and Harbor & Pine keep their original data so the numbers
+# on the design (and in the tests) never move; Summit is extra.
 # Rows are inserted with insert_all so, like the real legacy table, they are
 # allowed to hold values the validations would now reject.
 class DemoData
@@ -47,12 +50,16 @@ class DemoData
   def run
     northwind = Company.find_or_create_by!(name: "Northwind Logistics")
     harbor = Company.find_or_create_by!(name: "Harbor & Pine Clinics")
+    summit = Company.find_or_create_by!(name: "Summit Physio Group")
 
     create_admin(northwind, "Maya Reyes", "maya.reyes@northwind.example")
+    create_admin(northwind, "Daniel Osei", "daniel.osei@northwind.example")
     create_admin(harbor, "Jonas Weber", "jonas.weber@harborpine.example")
+    create_admin(summit, "Aisha Bello", "aisha.bello@summitphysio.example")
 
     seed_assessments(northwind, domain: "northwind.example", count: 64, generator_seed: 7, mess: true, fixed_ids: true)
     seed_assessments(harbor, domain: "harborpine.example", count: 24, generator_seed: 99, mess: false)
+    seed_assessments(summit, domain: "summitphysio.example", count: 40, generator_seed: 311, mess: true)
     ActiveRecord::Base.connection.reset_pk_sequence!("assessments")
     print_accounts
   end
@@ -62,10 +69,12 @@ class DemoData
   def print_accounts
     puts <<~TEXT
 
-      Demo company admins (sign in at http://localhost:3000):
-        maya.reyes@northwind.example   Northwind Logistics (64 assessments)
-        jonas.weber@harborpine.example Harbor & Pine Clinics (24 assessments)
-      Password for both: #{DEMO_PASSWORD}
+      Demo company admins (open the app, then sign in):
+        maya.reyes@northwind.example       Northwind Logistics (64 assessments)
+        daniel.osei@northwind.example      Northwind Logistics (same company, second admin)
+        jonas.weber@harborpine.example     Harbor & Pine Clinics (24 assessments)
+        aisha.bello@summitphysio.example   Summit Physio Group (40 assessments)
+      Password for all of them: #{DEMO_PASSWORD}
       (set DEMO_ADMIN_PASSWORD before seeding to choose your own)
     TEXT
   end
