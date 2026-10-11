@@ -1,5 +1,5 @@
 # Status normalization backfill. PLAN ONLY: designed and tested here, to be run
-# by a person following the release plan (SOLUTION.md / db/release_plan/RUNBOOK.md).
+# by a person following the release plan (SOLUTION.md, section 6, and the SQL steps in db/release_plan/).
 #
 #   bin/rails status:backfill:report            read-only audit, safe any time
 #   bin/rails status:backfill:run CONFIRM=yes   batched update (needs step 3 done)

@@ -10,6 +10,6 @@ if Rails.env.production? && ENV["DATABASE_URL"].blank? && ENV["SECRET_KEY_BASE_D
     On Railway, open the app service's Variables and add DATABASE_URL=${{Postgres.DATABASE_URL}}
     (the name inside ${{ }} must match your PostgreSQL service exactly), then redeploy.
     On Heroku, add a Postgres add-on, which sets it. Locally, export DATABASE_URL=postgres:///your_database.
-    See RAILWAY_SETUP.md, section 3.
+    The README's "Hosting on Railway" section lists every variable.
   MESSAGE
 end

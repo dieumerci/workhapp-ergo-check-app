@@ -43,7 +43,15 @@ node_modules
 *.local
 
 
-# Personal notes for the recorded walkthrough and for interview questions.
-# Kept on this machine only; never committed.
-/LOOM_VIDEO_SCRIPT.md
-/INTERVIEW_PREP.md
+# The submission has exactly two documents: README.md (how to run it) and
+# SOLUTION.md (the design and trade-offs). Every other Markdown file is a
+# personal note (video script, interview preparation, hosting notes, the
+# assignment-versus-delivery write-up, ...). They stay on this machine only and
+# are never committed; new ones are ignored automatically.
+*.md
+!/README.md
+!/SOLUTION.md
+
+# Local working notes that are not part of the submission.
+/docs/
+/.claude-checklist.json

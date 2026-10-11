@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
+# This Dockerfile is designed for production, not development. Build and run it by hand, or let a platform such as Railway build it:
 # docker build -t workhappy .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name workhappy workhappy
 
