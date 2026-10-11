@@ -6,12 +6,14 @@
 class ExportsController < InertiaController
   include ActiveStorage::SetCurrent # lets the signed storage URL be generated for the download
 
-  rate_limit to: 10, within: 1.hour, only: %i[create retry], with: -> {
+  # Each limit needs its own `name:`. Rails builds the counter's key from the controller and the name, so two
+  # unnamed limits in one controller would share a counter (previews would use up the export budget).
+  rate_limit to: 10, within: 1.hour, only: %i[create retry], name: "create-retry", with: -> {
     redirect_back_or_to exports_path, alert: "Too many export requests. Please try again later."
   }
 
   # The preview runs a company-wide count on every call, so it is limited too.
-  rate_limit to: 60, within: 1.minute, only: :preview, with: -> {
+  rate_limit to: 60, within: 1.minute, only: :preview, name: "preview", with: -> {
     render json: { count: 0, error: "Too many requests. Please wait a moment." }, status: :too_many_requests
   }
 

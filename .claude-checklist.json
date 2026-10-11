@@ -389,6 +389,11 @@
           "done": true
         },
         {
+          "id": "12.13",
+          "title": "Rate limits covered by tests (11) and a shared-counter bug fixed: export previews no longer use up the export budget",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

@@ -45,13 +45,19 @@ class CaptchaTest < ActionDispatch::IntegrationTest
   test "ten replays of one cookie still pass the CAPTCHA at most once" do
     get captcha_path
     original_cookie = cookies["_ergocheck_session"]
-    results = Array.new(10) do
+    # A different address per attempt, so the per-account and per-address sign-in limits (which now
+    # really count in tests) cannot refuse an attempt before the CAPTCHA is even looked at.
+    limited = 0
+    results = Array.new(10) do |i|
       cookies["_ergocheck_session"] = original_cookie
-      post session_path, params: { email: "nobody@example.com", password: "whatever-12345", captcha: KNOWN_CAPTCHA }
+      post session_path, params: { email: "nobody#{i}@example.com", password: "whatever-12345", captcha: KNOWN_CAPTCHA }
       follow_redirect!
-      inertia.props[:errors].with_indifferent_access.key?(:captcha)
+      errors = inertia.props[:errors].with_indifferent_access
+      limited += 1 if errors[:base]&.first.to_s.start_with?("Too many attempts")
+      errors.key?(:captcha)
     end
 
+    assert_equal 0, limited, "this test is about the CAPTCHA, not the rate limit"
     assert_equal 1, results.count(false), "exactly one attempt may get past the CAPTCHA"
     assert_equal 9, results.count(true)
   end

@@ -20,7 +20,10 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = true
-  config.cache_store = :null_store
+  # A real (in-process) store, because Rails keeps its rate-limit counters in the cache and a
+  # null store never counts, so no limit could ever trip under test. Each parallel test process has its
+  # own copy, and the integration tests clear it before every test (see test_helper.rb).
+  config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable

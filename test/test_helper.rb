@@ -76,6 +76,8 @@ class ActionDispatch::IntegrationTest
   # Tests control the CAPTCHA answer through the generator seam, so the real
   # image rendering and digest verification are still exercised end to end.
   setup do
+    # Rate-limit counters live in the cache; start every test from zero.
+    Rails.cache.clear
     Captcha.code_generator = -> { KNOWN_CAPTCHA }
     Captcha.question_generator = -> { KNOWN_QUESTION }
   end
