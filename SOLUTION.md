@@ -350,7 +350,7 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 248 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening, new assessment, seeds); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 249 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, hardening, new assessment, seeds); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser against the design's screenshots; production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
@@ -375,6 +375,7 @@ before fixing and now has a test that fails without the fix. Full list with evid
 | Dialog focus escape, no inert background, no error boundary | accessibility and resilience | portal + `inert`, topmost-only keys, error boundary |
 | No non-visual CAPTCHA alternative | blind admins could not sign in | accessible text question, stricter throttle |
 | *(mine, found by the final gate)* the storage guard raised `NameError` in an initializer | every production boot would have failed; dev and test skip that branch, so 228 green tests missed it | `after_initialize`, plus a test that boots real production mode in a subprocess |
+| *(mine, found by the production-mode gate)* the New assessment form's `scores` parameter was not filtered | the request log printed `"scores"=>{"workstation_setup"=>"90", …}`: health values in clear next to a numeric employee id, while the employee's name was already `[FILTERED]` | `:scores` added to the filter list (it also matches `section_scores`), with a test that reads the log |
 | *(mine, found by the New assessment tests)* SQL logging ignores a model's own `filter_attributes`, and development's query log tags switch prepared statements off | a new employee's name was written to the SQL log in clear (as a bind in the test log, as a literal in `log/development.log`) | a bare `name` joins the global filter list; query log tags are off in development so values stay binds and are masked |
 
 One reviewer finding I **rejected**: that a computable score is hidden for legacy blank-status rows. That is the design's rule ("Pending… say Not scored yet"), and those exact rows are what the backfill audit lists for a human; I documented it instead of changing it.

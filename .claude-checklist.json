@@ -345,7 +345,7 @@
         },
         {
           "id": "12.3",
-          "title": "Log leak found by the new tests and fixed: bare name filtered, dev query log tags off (SOLUTION §12)",
+          "title": "Log leaks found by the new tests and the production-mode gate, and fixed: bare name and scores filtered, dev query log tags off (SOLUTION §12)",
           "done": true
         },
         {

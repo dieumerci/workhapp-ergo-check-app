@@ -68,7 +68,7 @@ Legend: `[x]` done and merged · `[ ]` pending
 
 ## 9. Quality gates (zero warnings)
 
-- [x] 9.1 Automated tests (248): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening, new assessment, seeds
+- [x] 9.1 Automated tests (249): tenancy, export redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, hardening, new assessment, seeds
 - [x] 9.2 `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `npm run check` all clean
 - [x] 9.3 Browser walkthrough of every screen against the design screenshots
 - [x] 9.4 Production configuration verified by booting production mode: single database, Solid Queue worker building an export, SSL headers, CSP with nonce, no signed links in logs
@@ -101,7 +101,7 @@ Findings raised by an independent read-only reviewer and by the audit; full deta
 
 - [x] 12.1 Click-through of every screen as a user; the missing piece was a way to create data, so a tenant-safe **New assessment** flow was added (`ae41044`)
 - [x] 12.2 Richer seed data: a third tenant (Summit Physio Group) and a second Northwind admin; production skips seeds unless `ALLOW_DEMO_SEED=true` (`a960fdb`)
-- [x] 12.3 Log leak found by the new tests and fixed: bare `name` filtered, dev query log tags off (SOLUTION §12)
+- [x] 12.3 Log leaks found by the new tests and the production-mode gate, and fixed: bare `name` and `scores` filtered, dev query log tags off (SOLUTION §12)
 - [x] 12.4 Run on another port documented (`PORT=4000 bin/dev`, `VITE_RUBY_PORT` for Vite)
 - [x] 12.5 `README.md` rewritten: what the app is, architecture, demo logins, "is it fully functional", why not Devise, Railway steps
 - [x] 12.6 `APP_GUIDE.md`: plain-language tour, settings, everyday tasks, troubleshooting

@@ -171,6 +171,14 @@ class NewAssessmentTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "the section scores never reach the request log" do
+    log = captured_log { create_via_form(scores: scores(93, 61, 47, 58)) }
+
+    assert_not_includes log, %("workstation_setup"=>"93")
+    assert_not_includes log, %("posture_movement"=>"61")
+    assert_match(/"scores"=>"\[FILTERED\]"/, log)
+  end
+
   test "the new employee's name never reaches the log" do
     log = captured_log { create_via_form(employee_id: "new", employee_name: "Zanele Mokoena", department: "Warehouse") }
 

@@ -11,7 +11,7 @@ All notable changes, generated from the Conventional Commits history. Versioning
 - **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
 
 ### Fixes
-- **logging:** filter a bare `name` and stop development's query tags from printing values inline (`ae41044`)
+- **logging:** filter a bare `name` and section `scores`, and stop development query tags from printing values inline (`ae41044` and the fix that follows it)
 - **dev:** make bin/dev serve Rails on the documented port (`eaa4d4b`)
 
 ## [0.1.0] - 2026-10-10

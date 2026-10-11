@@ -100,7 +100,7 @@ More help (Postgres not running, a blank page, the CAPTCHA) is in [`APP_GUIDE.md
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 248 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment
+bin/rails test           # 249 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories

@@ -7,6 +7,7 @@
 # This app handles health data, so the list is deliberately broad:
 #   :email, :employee_email   personal identifiers (employee_email is also caught by :email)
 #   :responses, :answers      raw assessment answers (matches responses_json and friends)
+#   :scores                   section scores typed into the New assessment form (also matches section_scores)
 #   :free_text                free-text answers
 #   :captcha                  the sign-in verification code
 #   /\Aname\z/                a bare `name` column or parameter (employee and admin names).
@@ -16,7 +17,7 @@
 #   passw/secret/token/...    the Rails defaults
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text, /\Aname\z/
+  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text, :scores, /\Aname\z/
 ]
 
 # Rails logs every redirect target ("Redirected to ..."). The export download
