@@ -101,7 +101,7 @@ More help (Postgres not running, a blank page, the CAPTCHA) is in [`APP_GUIDE.md
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 266 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits
+bin/rails test           # 271 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -231,8 +231,8 @@ Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" t
 The app is set up to be hosted on [Railway](https://railway.com) as **one app service plus one PostgreSQL service**. The step-by-step
 walkthrough and every variable are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md); this section explains how the pieces fit.
 
-> **Status, stated plainly:** the hosting configuration is written and checked, but I have **not deployed it to a live Railway project**
-> (no Docker or Railway account in my environment). What *was* tested: the same commands run locally in production mode (release build,
+> **Status, stated plainly:** the hosting configuration is written and checked, but I have **not deployed it to a live Railway project myself**
+> (no Docker or Railway account in my environment). The owner's first deploy found a real bug, now fixed: the `production:` block in `config/database.yml` was commented out, so production only worked when `DATABASE_URL` was set, and the app now stops with a clear message when it isn't. What *was* tested: the same commands run locally in production mode (release build,
 > `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and downloaded, the health check answering on IPv4 and IPv6),
 > and `railway.json` is checked by a test against the rules in Railway's published schema. Expect to read the first deploy's logs.
 
@@ -276,14 +276,15 @@ walkthrough and every variable are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md); th
 `RAILS_ENV=production` is already set inside the Dockerfile. The full list with explanations, the S3 variables, tuning options and
 troubleshooting are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md).
 
-### Deploy in six steps
+### Deploy in seven steps
 
 1. **Push this repository to GitHub.**
 2. In Railway: **New Project → Deploy from GitHub repo**, pick the repository. Railway finds the `Dockerfile` and reads [`railway.json`](railway.json). The first deploy stops with a missing-secret error until step 4. That is expected.
 3. **Add the database:** **New → Database → Add PostgreSQL**.
 4. Open the app service → **Variables**, and add the variables above (use the **Raw Editor** to paste them in one go).
 5. **Storage:** create a **Volume** (⌘K or right-click the canvas), attach it to the app service and set its mount path to `/rails/storage`.
-6. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#try-it-demo-sign-in).
+6. **Check the app service's Settings:** *Pre-deploy command* `bin/rails db:prepare db:seed`, *Start command* `bin/rails server -b ::` (or empty), *Builder* Dockerfile, *Healthcheck path* `/up`; and that **Variables** shows a real `DATABASE_URL` value. If the start command reads `bundle exec puma …`, that is the Heroku `Procfile`: replace it.
+7. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#try-it-demo-sign-in).
 
 **Changing or rolling back:** pushing to the connected branch deploys again. To go back, open the service's **Deployments** list, use the menu on an earlier deployment and choose **Rollback** (it restores the image and the variables).
 

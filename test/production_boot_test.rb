@@ -21,6 +21,24 @@ class ProductionBootTest < ActiveSupport::TestCase
     assert_match(/BOOT_OK queue=SolidQueueAdapter/, stdout)
   end
 
+  # The other tests all pass DATABASE_URL, which is how a missing production block in
+  # config/database.yml went unnoticed. This one leaves it out, as a fresh platform service does.
+  test "without DATABASE_URL production refuses to boot and says what to set" do
+    _stdout, stderr, status = boot("DATABASE_URL" => nil, "SECRET_KEY_BASE_DUMMY" => nil, "SECRET_KEY_BASE" => "a" * 64)
+
+    assert_not status.success?
+    assert_match(/DATABASE_URL is not set/, stderr)
+    assert_match(/Postgres\.DATABASE_URL/, stderr, "the message should show the Railway reference to use")
+    assert_no_match(/not configured for the .production. environment/, stderr, "the cryptic ActiveRecord error should not be what the operator sees")
+  end
+
+  test "the image build step (assets precompile with a dummy secret) needs no database" do
+    stdout, stderr, status = boot("DATABASE_URL" => nil)
+
+    assert status.success?, "boot without a database under SECRET_KEY_BASE_DUMMY failed:\n#{stderr.lines.first(8).join}"
+    assert_match(/BOOT_OK/, stdout)
+  end
+
   test "a Heroku-like platform without object storage refuses to boot, with a clear reason" do
     _stdout, stderr, status = boot("DYNO" => "web.1")
 

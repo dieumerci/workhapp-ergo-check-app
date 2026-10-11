@@ -394,6 +394,11 @@
           "done": true
         },
         {
+          "id": "12.14",
+          "title": "First Railway deploy failed: the production block in config/database.yml was commented out. Fixed, with a readable boot error and tests that run without DATABASE_URL",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

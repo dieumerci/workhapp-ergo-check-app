@@ -5,7 +5,7 @@ how to check it works, and how to run things afterwards. The short version lives
 
 > **Status, stated plainly.** The hosting configuration ([`railway.json`](railway.json), the [`Dockerfile`](Dockerfile), the seeds) is written, and the same steps were run **locally in
 > production mode** and passed (release build, `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and downloaded, the health check on IPv4 and IPv6).
-> It has **not been deployed to a live Railway project**, because I had no Docker or Railway account to do it with. Railway's behaviour below comes from its documentation. Read the first deploy's logs and
+> I have **not deployed it to a live Railway project myself**, because I had no Docker or Railway account to do it with. The owner's first deploy found a real bug (the `production:` block in `config/database.yml` was commented out, so production only worked when `DATABASE_URL` was set; fixed, and the app now stops with a clear message instead), which is a good reason to treat the rest with the same caution. Railway's behaviour below comes from its documentation. Read the deploy's logs and
 > trust them over this file where they disagree.
 
 **Contents:** [1 What you will have](#1-what-you-will-have) · [2 Before you start](#2-before-you-start) · [3 The environment variables](#3-the-environment-variables) ·
@@ -63,7 +63,7 @@ RAILWAY_RUN_UID=0
 
 | Variable | Value | Required? | What it does, and what happens without it |
 |---|---|---|---|
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | **Yes** | How the app finds Postgres. The same single database holds the app tables, the job queue and the cache. Without it the app cannot boot. |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | **Yes** | How the app finds Postgres. The same single database holds the app tables, the job queue and the cache. **Without it the app stops at boot** with ``DATABASE_URL is not set, so the app has no database to connect to`` (older builds showed the cryptic ``The `production` database is not configured for the `production` environment``). |
 | `SECRET_KEY_BASE` | 128 hex characters from `bin/rails secret` | **Yes** | Signs and encrypts cookies and signed links, and seeds the one-way `emp_…` employee references. Without it the app refuses to start. **Changing it later signs everyone out and changes every `emp_…` reference in future exports.** |
 | `SOLID_QUEUE_IN_PUMA` | `1` | **Yes** (single-service setup) | Starts the job worker inside the web process. **Without it the app works but exports stay "Building" forever**, because nothing runs the job. |
 | `PORT` | `3000` | Recommended | The port Puma listens on. Railway detects the listening port when you generate a domain; setting it removes any doubt. |
@@ -121,14 +121,20 @@ Never commit any of the values above. They live in Railway's Variables tab (and 
 2. **Add the database.** In the project canvas: **Create / New → Database → Add PostgreSQL**. Note the service's name (normally `Postgres`).
 3. **Add the variables.** Open the **app** service → **Variables** → **Raw Editor**, paste the block from section 3.1 (with your two values), and save.
 4. **Add storage.** A Volume mounted at `/rails/storage` (Option A: ⌘K or right-click the canvas, attach it to the app service, set the mount path) or the S3 variables (Option B).
-5. **Deploy.** Saving variables usually triggers a new deployment; if not, use **Deploy** (or **Redeploy** on the latest deployment).
-6. **Watch the logs.** Open the deployment → **Build logs**, then **Deploy logs**. A healthy run shows, in order:
+5. **Check the service's Settings before you rely on it.** Open the app service → **Settings** and confirm these four (they are what `railway.json` asks for; if Railway ignored the file, or a start command was typed in earlier, the values here win):
+   - **Builder:** Dockerfile
+   - **Pre-deploy command:** `bin/rails db:prepare db:seed` (this is what creates the tables and the demo data; **without it the app starts but every page fails with `relation "…" does not exist`**)
+   - **Custom start command:** `bin/rails server -b ::` (or empty, so the image's own command runs). If you see `bundle exec puma -C config/puma.rb` here, that is the `Procfile` (the Heroku path); it neither prepares the database nor binds IPv6, so replace it.
+   - **Healthcheck path:** `/up`
+   Then check **Variables**: `DATABASE_URL` must show a real `postgres://…` value (open it to see), not an empty value or an unresolved `${{…}}`.
+6. **Deploy.** Saving variables usually triggers a new deployment; if not, use **Deploy** (or **Redeploy** on the latest deployment).
+7. **Watch the logs.** Open the deployment → **Build logs**, then **Deploy logs**. A healthy run shows, in order:
    - the Docker build finishing (gems installed, the Vite bundle built, `assets:precompile`);
    - the pre-deploy step: the database being prepared and the seed lines, e.g. `Northwind Logistics: seeded 64 assessments for 64 employees` (first deploy) or `…already present, skipping` (later ones);
    - Puma starting (`Listening on http://[::]:3000`) and the job worker starting (`SolidQueue-… Started Supervisor`, `Started Worker`, `Started Scheduler`);
    - the health check passing and the deployment turning **Active**.
-7. **Give it a public address.** App service → **Settings → Networking → Generate Domain**. Railway detects the listening port; if it shows a wrong one, edit it to **3000** (pencil icon next to the domain).
-8. Open the URL and continue with section 6.
+8. **Give it a public address.** App service → **Settings → Networking → Generate Domain**. Railway detects the listening port; if it shows a wrong one, edit it to **3000** (pencil icon next to the domain).
+9. Open the URL and continue with section 6.
 
 ## 5. Or use the CLI
 
@@ -221,6 +227,9 @@ The single-service setup runs jobs inside Puma. That is simplest, but a heavy ex
 
 | Symptom | Likely cause and fix |
 |---|---|
+| Logs: ``The `production` database is not configured for the `production` environment`` (or, on newer builds, ``DATABASE_URL is not set``) | The app service has **no `DATABASE_URL`**. Open the **app** service (not the Postgres service) → **Variables** and add `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`. The name before the dot must match your PostgreSQL service's name exactly (check it in the project canvas), both must be in the same environment, and the value must show as resolved. Redeploy. (Older builds of this repo also had a bug: the `production:` header in `config/database.yml` was commented out, so production relied on that variable alone. Fixed.) |
+| The app starts but pages fail with `PG::UndefinedTable` / ``relation "admins" does not exist`` | The tables were never created: the **pre-deploy command** did not run (or the start command is `bundle exec puma …` from the Procfile). Set the pre-deploy command in **Settings** (`bin/rails db:prepare db:seed`) and redeploy, or run it once by hand: `railway ssh`, then `bin/rails db:prepare db:seed`. |
+| Logs show `bundle exec puma -C config/puma.rb` as the command | That is the `Procfile` (the Heroku path). Set the **Custom start command** to `bin/rails server -b ::` (or clear it). |
 | Deploy fails: `Missing secret_key_base` | `SECRET_KEY_BASE` is not set (or set on the wrong service). Add it and redeploy. |
 | Pre-deploy fails: could not connect / `connection refused` | `DATABASE_URL` does not reference the database service. The name inside `${{…}}` must match the Postgres service's name exactly. |
 | Health check fails (deploy never goes Active) | Open the deploy logs. Common causes: the app crashed on boot (a missing variable), or the database is not reachable. `/up` itself is unauthenticated and not host-filtered. |

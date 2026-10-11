@@ -11,6 +11,7 @@ All notable changes, generated from the Conventional Commits history. Versioning
 - **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
 
 ### Fixes
+- **deploy:** give production its own `database.yml` block (it was commented out), stop the boot with a readable message when `DATABASE_URL` is missing, and test it without the variable
 - **rate limits:** name each limit so counters don't collide (export previews were using up the hourly export budget), and test every limit against a real cache
 - **deploy:** `railway.json` runs one pre-deploy command, as Railway's schema requires, and a test guards it
 - **logging:** filter a bare `name` and section `scores`, and stop development query tags from printing values inline (`ae41044` and the fix that follows it)

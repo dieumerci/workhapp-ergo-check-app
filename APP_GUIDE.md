@@ -109,7 +109,7 @@ The full list with comments is in [`.env.example`](.env.example).
 ```bash
 bin/rails db:seed            # add any missing demo data (never duplicates); prints the accounts
 bin/rails db:reset           # wipe the development database and start again from the seeds
-bin/rails test               # run the 266 automated tests
+bin/rails test               # run the 271 automated tests
 bin/ci                       # every check: style, security audits, types, tests
 bin/rails console            # a Ruby prompt with the app loaded
 ```
