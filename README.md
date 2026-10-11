@@ -14,11 +14,12 @@ Plus the extras the owner asked for: a **self-hosted CAPTCHA** on sign-in, a **c
 **New assessment** form so the app can be explored end to end.
 
 **Read next:** [`APP_GUIDE.md`](APP_GUIDE.md) (a plain-language tour: screens, how to run, troubleshooting) ·
+[`RAILWAY_SETUP.md`](RAILWAY_SETUP.md) (every variable and the step-by-step to host it) ·
 [`SOLUTION.md`](SOLUTION.md) (design, trade-offs, measured before/after, release and rollback plan) ·
 [`CHECKLIST.md`](CHECKLIST.md) (every item ticked) · [`db/release_plan/RUNBOOK.md`](db/release_plan/RUNBOOK.md) (how to ship the status change).
 
 **Contents:** [Try it: demo sign-in](#try-it-demo-sign-in) · [Is it fully functional?](#is-it-fully-functional) ·
-[Run it locally](#run-it-locally) · [Architecture](#architecture) · [Deploy on Railway](#deploy-on-railway) ·
+[Run it locally](#run-it-locally) · [Architecture](#architecture) · [Hosting on Railway](#hosting-on-railway) ·
 [Quality gates](#quality-gates) · [Demo script](#demo-script-510-minutes)
 
 ## Stack
@@ -100,7 +101,7 @@ More help (Postgres not running, a blank page, the CAPTCHA) is in [`APP_GUIDE.md
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 249 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment
+bin/rails test           # 255 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -225,50 +226,71 @@ Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" t
 | Logging | `config/initializers/filter_parameter_logging.rb`, `test/integration/log_hygiene_test.rb` |
 | Deployment | `Dockerfile`, `railway.json`, `Procfile`, `app.json`, `bin/docker-entrypoint` |
 
-## Deploy on Railway
+## Hosting on Railway
 
-The repository is ready for [Railway](https://railway.com): the `Dockerfile` builds the app (including the Vite bundle) and
-[`railway.json`](railway.json) tells Railway to use it, run the database steps **before** each release, check `/up`, and restart on failure.
+The app is set up to be hosted on [Railway](https://railway.com) as **one app service plus one PostgreSQL service**. The step-by-step
+walkthrough and every variable are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md); this section explains how the pieces fit.
 
-> **Honesty note:** I could not run Docker or a Railway deployment from my environment, so this path has not been executed end to end. The commands and variables below come from
-> Railway's documentation and the app's own production-mode boot, which I did test locally. Expect to read the first deploy's logs.
+> **Status, stated plainly:** the hosting configuration is written and checked, but I have **not deployed it to a live Railway project**
+> (no Docker or Railway account in my environment). What *was* tested: the same commands run locally in production mode (release build,
+> `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and downloaded, the health check answering on IPv4 and IPv6),
+> and `railway.json` is checked by a test against the rules in Railway's published schema. Expect to read the first deploy's logs.
 
-**Steps**
+### How it is hosted
+
+```
+ GitHub repository ──push──▶ Railway project
+                              │
+                              ├─ App service  (built from the Dockerfile, configured by railway.json)
+                              │     1. build        Dockerfile: Ruby gems, Node only to compile the Vite/React bundle, assets precompiled
+                              │     2. pre-deploy   bin/rails db:prepare db:seed     (creates/migrates tables; demo data only if allowed)
+                              │     3. start        bin/rails server -b ::           (Puma; the job worker runs inside it)
+                              │     4. health check GET /up must answer 200 before the new version takes traffic
+                              │     └─ public URL   Settings → Networking → Generate Domain (HTTPS, handled by Railway)
+                              │
+                              ├─ Postgres service  ── DATABASE_URL (private network)   one database: app tables + job queue + cache
+                              │
+                              └─ Export files      Volume mounted at /rails/storage   (or S3-compatible storage)
+```
+
+- **One service runs everything.** Puma serves the app and, with `SOLID_QUEUE_IN_PUMA=1`, also runs the job worker that builds CSV exports. Jobs, cache and app data share the one Postgres, so there is no Redis to host.
+- **The release is gated by the pre-deploy command.** Railway runs it in a separate container after the build and before the new version starts; if it fails, the deploy stops and the previous version stays live. `db:prepare` creates the tables on a fresh database and migrates an existing one; `db:seed` is safe to repeat and does nothing in production unless `ALLOW_DEMO_SEED=true`.
+- **The health check protects each deploy.** Railway calls `/up` (from the host `healthcheck.railway.app`, which the app does not filter) and only switches traffic over once it answers with a success status.
+- **HTTPS is terminated by Railway.** The app trusts that (`assume_ssl`), forces secure cookies, and sends a strict Content-Security-Policy.
+- **Export files need storage that survives a deploy.** A container's disk is wiped on every deploy, so attach a Railway **Volume** at `/rails/storage` (simplest, one app replica) or use S3-compatible storage.
+- **Secrets stay out of the repository.** Everything below is set as Railway variables, never committed. The demo password is the one value you must change before the URL is public.
+
+### The variables you need
+
+| Variable | Value | Needed |
+|---|---|---|
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (a reference to the Postgres service) | **yes** |
+| `SECRET_KEY_BASE` | output of `bin/rails secret` | **yes** |
+| `SOLID_QUEUE_IN_PUMA` | `1` | **yes**, or exports never get built |
+| `ALLOW_DEMO_SEED` | `true` | for a demo with sample companies |
+| `DEMO_ADMIN_PASSWORD` | a long password you choose | **yes** whenever `ALLOW_DEMO_SEED=true` |
+| `SHOW_OPS_PAGES` | `true` | to show the Release plan and Safeguards pages |
+| `PORT` | `3000` | recommended, pins the port the domain points at |
+| `RAILWAY_RUN_UID` | `0` | only if you attach a Volume |
+
+`RAILS_ENV=production` is already set inside the Dockerfile. The full list with explanations, the S3 variables, tuning options and
+troubleshooting are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md).
+
+### Deploy in six steps
 
 1. **Push this repository to GitHub.**
-2. In Railway: **New Project → Deploy from GitHub repo** and pick the repository. Railway sees the `Dockerfile` and `railway.json`.
-3. **Add the database:** in the project, **New → Database → Add PostgreSQL**.
-4. Open the app service → **Variables**, and add:
+2. In Railway: **New Project → Deploy from GitHub repo**, pick the repository. Railway finds the `Dockerfile` and reads [`railway.json`](railway.json). The first deploy stops with a missing-secret error until step 4. That is expected.
+3. **Add the database:** **New → Database → Add PostgreSQL**.
+4. Open the app service → **Variables**, and add the variables above (use the **Raw Editor** to paste them in one go).
+5. **Storage:** create a **Volume** (⌘K or right-click the canvas), attach it to the app service and set its mount path to `/rails/storage`.
+6. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#try-it-demo-sign-in).
 
-   | Variable | Value |
-   |---|---|
-   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (a reference to the database service; use its name if you renamed it) |
-   | `SECRET_KEY_BASE` | the output of `bin/rails secret` (any long random string) |
-   | `SOLID_QUEUE_IN_PUMA` | `1`, so the one service also runs the job worker that builds exports |
-   | `ALLOW_DEMO_SEED` | `true`, to load the demo companies on deploy (seeds are skipped in production otherwise) |
-   | `DEMO_ADMIN_PASSWORD` | **a password you choose.** Never leave the documented demo one on a public URL |
-   | `SHOW_OPS_PAGES` | `true`, so the Release plan and Safeguards pages show (they are 404 in production by default) |
+**Changing or rolling back:** pushing to the connected branch deploys again. To go back, open the service's **Deployments** list, use the menu on an earlier deployment and choose **Rollback** (it restores the image and the variables).
 
-5. **Where exports are stored.** Export files are written through Active Storage. Railway's container disk is wiped on every deploy, so choose one:
-   - *Quick demo:* attach a **Volume** to the service mounted at `/rails/storage`, and set `RAILWAY_RUN_UID=0` (the image runs as a non-root user, which cannot write to a fresh volume otherwise). A volume allows one replica and a redeploy has a short downtime.
-   - *Better:* S3-compatible storage. Set `ACTIVE_STORAGE_SERVICE=amazon`, `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` (a private bucket).
-6. **Settings → Networking → Generate Domain.** Open it and sign in with a [demo account](#try-it-demo-sign-in).
+If Railway ignores `railway.json` (its documentation now describes config-as-code as a legacy feature), set the same four things in the service **Settings**:
+*Builder* = Dockerfile, *Pre-deploy command* = `bin/rails db:prepare db:seed`, *Start command* = `bin/rails server -b ::`, *Healthcheck path* = `/up`.
 
-**What happens on each deploy:** Railway builds the image; before starting it runs `bin/rails db:prepare` (creates or migrates the tables) and `bin/rails db:seed`
-(idempotent, and a no-op unless `ALLOW_DEMO_SEED=true`); then it starts `bin/rails server -b ::` and waits for `/up` to answer 200.
-
-If Railway ignores `railway.json` (its docs now mark config-as-code as a legacy feature), set the same values in the service **Settings**: *Builder* = Dockerfile,
-*Pre-deploy command* = `bin/rails db:prepare && bin/rails db:seed`, *Start command* = `bin/rails server -b ::`, *Healthcheck path* = `/up`.
-
-| Other variable | Purpose |
-|---|---|
-| `EXPORT_MAX_SECONDS` | time budget per export (default 300) |
-| `RAILS_LOG_LEVEL` | defaults to `info`; never run production at `debug` with health data |
-| `RAILS_MASTER_KEY` | only if you use encrypted credentials instead of `SECRET_KEY_BASE` |
-
-Production forces SSL, sends a strict Content-Security-Policy, never seeds demo accounts unless you opt in, refuses to boot on Heroku's ephemeral disk without object storage, and does not route Active Storage's unauthenticated upload endpoints.
-
-**The brief's release plan is written for a "Heroku-like" platform** (`heroku pg:backups`, `heroku run`). On Railway the same plan applies: take the backup with `pg_dump` against the database's connection string, restore into a scratch database to prove it, and run the rake tasks with `railway run` or in a one-off shell. A Heroku `Procfile` and `app.json` are included too.
+**The brief's release plan is written for a "Heroku-like" platform** (`heroku pg:backups`, `heroku run`). On Railway the same plan applies: take the backup with `pg_dump` against the database's connection string (enable the Postgres service's *Public Access* to reach it from your machine), restore it into a scratch database to prove it, and run the rake tasks inside the deployed service with `railway ssh`. A Heroku `Procfile` and `app.json` are included too.
 
 ## Demo script (5–10 minutes)
 

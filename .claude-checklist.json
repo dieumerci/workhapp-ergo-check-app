@@ -379,6 +379,16 @@
           "done": true
         },
         {
+          "id": "12.11",
+          "title": "RAILWAY_SETUP.md: every environment variable, steps, troubleshooting; railway.json corrected to one pre-deploy command and guarded by a test",
+          "done": true
+        },
+        {
+          "id": "12.12",
+          "title": "INTERVIEW_PREP.md expanded into a detailed study guide (git-ignored)",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "preDeployCommand": ["bin/rails db:prepare", "bin/rails db:seed"],
+    "preDeployCommand": "bin/rails db:prepare db:seed",
     "startCommand": "bin/rails server -b ::",
     "healthcheckPath": "/up",
     "healthcheckTimeout": 300,

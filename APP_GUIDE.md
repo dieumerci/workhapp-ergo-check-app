@@ -109,7 +109,7 @@ The full list with comments is in [`.env.example`](.env.example).
 ```bash
 bin/rails db:seed            # add any missing demo data (never duplicates); prints the accounts
 bin/rails db:reset           # wipe the development database and start again from the seeds
-bin/rails test               # run the 249 automated tests
+bin/rails test               # run the 255 automated tests
 bin/ci                       # every check: style, security audits, types, tests
 bin/rails console            # a Ruby prompt with the app loaded
 ```
@@ -147,4 +147,4 @@ Admin.find_by!(email: "maya.reyes@northwind.example").update!(password: "another
 
 **Was the status clean-up run on the data?** No. The brief says *plan only*. The mapping, the guarded tasks and the eight-step release and rollback plan are built and tested, and `bin/rails status:backfill:report` shows what the backfill would do without changing anything. New and updated records already use only the five values.
 
-**Can I host it?** Yes. The README has Railway steps, and a Heroku `Procfile` and `app.json` are included.
+**Can I host it?** Yes. [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md) lists every variable and the steps for Railway (not yet deployed live; see its status note), and a Heroku `Procfile` and `app.json` are included.

@@ -7,10 +7,11 @@ All notable changes, generated from the Conventional Commits history. Versioning
 ### Features
 - **seeds:** add a third tenant and a second admin, and skip production quietly (`a960fdb`)
 - **assessments:** add a tenant-safe "New assessment" flow (`ae41044`)
-- **deploy:** add `railway.json` and Railway deployment steps
+- **deploy:** add `railway.json`, `RAILWAY_SETUP.md` and Railway hosting steps
 - **docs:** add `APP_GUIDE.md`; rewrite the README with the architecture, demo logins and hosting steps
 
 ### Fixes
+- **deploy:** `railway.json` runs one pre-deploy command, as Railway's schema requires, and a test guards it
 - **logging:** filter a bare `name` and section `scores`, and stop development query tags from printing values inline (`ae41044` and the fix that follows it)
 - **dev:** make bin/dev serve Rails on the documented port (`eaa4d4b`)
 
