@@ -38,6 +38,20 @@ class LogHygieneTest < ActionDispatch::IntegrationTest
     assert_match(/"responses_json"=>"\[FILTERED\]"/, log)
   end
 
+  test "what is typed into the search box never reaches the log, as a parameter, in the URL or in SQL" do
+    sign_in_as(@admin)
+    employee = create_employee(company: @company, name: "Zephyrine Quillfeather", email: "zq@example.com")
+    create_legacy_assessment(company: @company, employee: employee, status: "completed")
+
+    log = captured_log { get assessments_path, params: { q: "zephyrine quill", status: "all", preset: "all" } }
+
+    assert_no_leak log, "zephyrine", "Zephyrine", "quill"
+    assert_match(/"q"=>"\[FILTERED\]"/, log)
+    assert_match(/"status"=>"all"/, log)
+    assert_match(/ILIKE \$\d/, log, "the term is sent as a bind parameter")
+    assert_match(/\["search_term", "\[FILTERED\]"\]/, log)
+  end
+
   test "the query string in the request line is filtered too" do
     sign_in_as(@admin)
 

@@ -88,6 +88,20 @@ class ExportsTest < ActionDispatch::IntegrationTest
     assert_equal({ "from_date" => nil, "to_date" => nil, "status_filter" => "all" }, export.attributes.slice("from_date", "to_date", "status_filter"))
   end
 
+  test "a dashboard search is not part of an export" do
+    completed
+    completed(employee: create_employee(company: @company, name: "Someone Else", email: "else@example.com"))
+    sign_in_as(@admin)
+
+    get preview_exports_path, params: { q: "amara", status: "all" }
+    assert_equal 2, response.parsed_body["count"], "the preview counts what an export contains: the search is ignored"
+
+    assert_difference -> { AssessmentExport.count }, 1 do
+      request_export q: "amara", status: "all"
+    end
+    assert_equal({ from: nil, to: nil, status: "all" }, AssessmentExport.last.slice(:from_date, :to_date, :status_filter).symbolize_keys.transform_keys({ from_date: :from, to_date: :to, status_filter: :status }))
+  end
+
   test "invalid requests create nothing and say why" do
     completed
     sign_in_as(@admin)

@@ -20,6 +20,7 @@ function buildQuery(filters: Filters, page = 1): Query {
     query.from = filters.from
     query.to = filters.to
   }
+  if (filters.q) query.q = filters.q
   if (page > 1) query.page = page
   return query
 }
@@ -48,7 +49,7 @@ export default function Index({ filters, assessments, counts, legacy, pagination
     })
   }
 
-  const clear = () => visit({ status: 'all', preset: 'all', from: '', to: '' })
+  const clear = () => visit({ status: 'all', preset: 'all', from: '', to: '', q: '' })
 
   const openDetail = (row: AssessmentRow) =>
     router.get(
@@ -70,7 +71,7 @@ export default function Index({ filters, assessments, counts, legacy, pagination
     router.reload({ only: ['employees'] })
   }
 
-  const hasFilters = filters.status !== 'all' || filters.preset !== 'all'
+  const hasFilters = filters.status !== 'all' || filters.preset !== 'all' || filters.q !== ''
 
   return (
     <>
@@ -111,7 +112,7 @@ export default function Index({ filters, assessments, counts, legacy, pagination
             onClear={clear}
           />
           {legacy && <LegacyDataNote legacy={legacy} />}
-          <AssessmentTable rows={assessments} loading={loading} onOpen={openDetail} onClear={clear} />
+          <AssessmentTable rows={assessments} search={filters.q} loading={loading} onOpen={openDetail} onClear={clear} />
           <Pager pagination={pagination} onPage={(page) => visit({}, page)} />
         </div>
       </section>

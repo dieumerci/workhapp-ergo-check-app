@@ -5,6 +5,8 @@ export type Filters = {
   preset: '7' | '30' | '90' | 'all' | 'custom'
   from: string
   to: string
+  // What was typed into the search box ("" when nothing was).
+  q: string
 }
 
 export type AssessmentRow = {

@@ -100,6 +100,144 @@ class AssessmentsDashboardTest < ActionDispatch::IntegrationTest
     assert_equal 2, rows.size, "an unknown legacy status shows up under needs follow-up, not nowhere"
   end
 
+  # ---- search --------------------------------------------------------------
+
+  def search_fixtures
+    @priya = create_employee(company: @company, name: "Priya Carter", department: "Finance", email: "priya@example.com")
+    @tariq = create_employee(company: @company, name: "Tariq Rossi", department: "Warehouse", email: "tariq@example.com")
+    @priya_done = create_legacy_assessment(company: @company, employee: @priya, status: "comp", created_at: 3.days.ago)
+    @priya_open = create_legacy_assessment(company: @company, employee: @priya, status: "pending", created_at: 2.days.ago)
+    @tariq_done = create_legacy_assessment(company: @company, employee: @tariq, status: "completed", created_at: 1.day.ago)
+  end
+
+  test "searching by name lists that employee's assessments, newest first" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    visit q: "priya"
+
+    assert_equal [ @priya_open.id, @priya_done.id ], rows.map { |row| row[:id] }
+    assert_equal "priya", props[:filters][:q]
+    assert_equal 2, props[:pagination][:total]
+  end
+
+  test "the chip counts and the legacy note describe the search, not the whole company" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    visit q: "priya"
+
+    assert_equal({ "all" => 2, "pending" => 1, "in_progress" => 0, "completed" => 1, "needs_follow_up" => 0, "archived" => 0 }, props[:counts].to_h)
+    assert_equal 1, props[:legacy][:aliases], "only the searched rows are described"
+  end
+
+  test "search combines with the status filter and the date range" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    visit q: "priya", status: "completed"
+    assert_equal [ @priya_done.id ], rows.map { |row| row[:id] }
+
+    visit q: "priya", preset: "7"
+    assert_equal 2, rows.size
+    visit q: "priya", from: 1.day.ago.to_date.iso8601
+    assert_empty rows
+  end
+
+  test "searching by department and by code works, and a miss is an honest empty page" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    visit q: "warehouse"
+    assert_equal [ @tariq_done.id ], rows.map { |row| row[:id] }
+
+    visit q: "A-#{@priya_done.id}"
+    assert_equal [ @priya_done.id ], rows.map { |row| row[:id] }
+
+    visit q: "nobody by this name"
+    assert_empty rows
+    assert_equal 1, props[:pagination][:pages]
+    assert_equal 0, props[:counts][:all]
+  end
+
+  test "a search never reaches another company's employees or assessments" do
+    search_fixtures
+    theirs = create_employee(company: @other_company, name: "Priya Carter", department: "Clinic", email: "p@example.com")
+    other = create_legacy_assessment(company: @other_company, employee: theirs, status: "completed")
+    sign_in_as(@admin)
+
+    visit q: "priya"
+    assert_not_includes rows.map { |row| row[:id] }, other.id
+
+    visit q: other.id.to_s
+    assert_empty rows, "another company's assessment code finds nothing"
+  end
+
+  test "a search still costs two assessment queries" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?(%("assessments")) && payload[:name] != "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { visit q: "priya carter" }
+
+    assert_equal 2, queries.size, "expected one grouped count and one page query, got:\n#{queries.join("\n")}"
+  end
+
+  test "odd input is harmless: wildcards, long text, arrays and hashes" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    visit q: "%"
+    assert_empty rows
+    visit q: "x" * 5_000
+    assert_equal AssessmentSearch::MAX_LENGTH, props[:filters][:q].length
+    get assessments_path, params: { q: [ "priya" ] }
+    assert_response :success
+    assert_equal "", props[:filters][:q]
+    get assessments_path, params: { q: { a: "b" } }
+    assert_response :success
+  end
+
+  test "the search is never remembered, not even with consent" do
+    search_fixtures
+    sign_in_as(@admin)
+    post cookie_consent_path, params: { preferences: "true" }
+
+    visit q: "priya", status: "all", preset: "all"
+    get assessments_path
+
+    assert_equal "", props[:filters][:q]
+    assert_not_includes response.headers["Set-Cookie"].to_s, "priya"
+    assert_not_includes cookies.to_hash.values.join(" "), "priya"
+  end
+
+  test "a search on its own does not discard the remembered status and range" do
+    search_fixtures
+    sign_in_as(@admin)
+    post cookie_consent_path, params: { preferences: "true" }
+    visit status: "completed", preset: "all"
+
+    visit q: "priya"
+
+    assert_equal "completed", props[:filters][:status]
+    assert_equal "priya", props[:filters][:q]
+    assert_equal [ @priya_done.id ], rows.map { |row| row[:id] }
+  end
+
+  test "searches are rate limited, politely" do
+    search_fixtures
+    sign_in_as(@admin)
+
+    180.times { get assessments_path, params: { q: "priya" } }
+    get assessments_path, params: { q: "priya" }
+
+    assert_redirected_to assessments_path
+    assert_match(/Too many searches/, flash[:alert])
+    get assessments_path
+    assert_response :success, "plain browsing is not limited by searching"
+  end
+
   # ---- the data-tidiness note ---------------------------------------------
 
   test "a company with legacy statuses is told how many, and which spellings, without an extra query" do

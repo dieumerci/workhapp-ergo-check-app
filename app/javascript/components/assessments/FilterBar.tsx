@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import SearchField from '@/components/assessments/SearchField'
 import { cx } from '@/lib/cx'
 import type { StatusOption } from '@/types'
 import type { Counts, Filters } from '@/types/assessments'
@@ -39,6 +40,7 @@ export default function FilterBar({ filters, counts, statusOptions, hasFilters, 
 
   return (
     <div className="flex flex-col gap-3 border-b border-line px-4 py-3.5">
+      <SearchField value={filters.q} onSearch={(q) => onChange({ q })} />
       <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1.5">
         {tabs.map((tab) => {
           const active = filters.status === tab.value

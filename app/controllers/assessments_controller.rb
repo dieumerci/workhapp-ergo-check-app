@@ -6,6 +6,11 @@ class AssessmentsController < InertiaController
     redirect_back_or_to assessments_path, alert: "Too many new assessments in a short time. Please wait a moment."
   }
 
+  # Searching runs a company-wide lookup for every pause in typing, so it is limited too.
+  rate_limit to: 180, within: 1.minute, only: :index, if: -> { params[:q].present? }, name: "search", with: -> {
+    redirect_to assessments_path, alert: "Too many searches in a short time. Please wait a moment."
+  }
+
   def index
     filters = dashboard_filters
     remember(filters) if explicit_filters?
@@ -62,7 +67,7 @@ class AssessmentsController < InertiaController
   # Explicit filters in the URL win. Without any, the remembered preference
   # cookie (only ever present with consent) supplies status and preset.
   def dashboard_filters
-    source = explicit_filters? ? params : cookie_preferences.remembered_filters.merge(page: params[:page])
+    source = explicit_filters? ? params : cookie_preferences.remembered_filters.merge(page: params[:page], q: params[:q])
     AssessmentDashboard::Filters.from_params(source)
   end
 

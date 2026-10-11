@@ -10,6 +10,8 @@
 #   :scores                   section scores typed into the New assessment form (also matches section_scores)
 #   :free_text                free-text answers
 #   :captcha                  the sign-in verification code
+#   /\Aq\z/, :search_term   what was typed into the dashboard search (a person's name, more often than not):
+#                             the `q` request parameter, and the bind the query sends it in
 #   /\Aname\z/                a bare `name` column or parameter (employee and admin names).
 #                             SQL bind logging only honours this global list, not a
 #                             model's own filter_attributes, so without it the INSERT
@@ -17,7 +19,7 @@
 #   passw/secret/token/...    the Rails defaults
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text, :scores, /\Aname\z/
+  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text, :scores, :search_term, /\Aq\z/, /\Aname\z/
 ]
 
 # Rails logs every redirect target ("Redirected to ..."). The export download

@@ -1,6 +1,7 @@
 # Everything the assessments page needs for one request, in two queries.
 #
-#   1. one grouped COUNT of the company's assessments in the date range, by raw
+#   1. one grouped COUNT of the company's assessments in the date range (and
+#      matching the search, if one was typed), by raw
 #      status. Legacy spellings are folded into the five canonical statuses in
 #      Ruby (via Status.classify), so chip counts, the status filter and the
 #      total are consistent even before history is backfilled.
@@ -14,17 +15,18 @@ class AssessmentDashboard
 
   # Normalised filter input. Anything unexpected falls back to "no filter".
   class Filters
-    attr_reader :status, :preset, :from, :to, :page
+    attr_reader :status, :preset, :from, :to, :page, :search
 
     def self.from_params(params, today: Date.current)
       new(
         status: params[:status], preset: params[:preset], from: params[:from], to: params[:to],
-        page: params[:page], today: today
+        page: params[:page], search: params[:q], today: today
       )
     end
 
-    def initialize(status:, preset:, from:, to:, page:, today: Date.current)
+    def initialize(status:, preset:, from:, to:, page:, search: nil, today: Date.current)
       @status = Status::CANONICAL.include?(status.to_s) ? status.to_s : "all"
+      @search = AssessmentSearch.clean(search)
       @page = [ page.to_s.to_i, 1 ].max
       from_date = parse_date(from)
       to_date = parse_date(to)
@@ -50,7 +52,7 @@ class AssessmentDashboard
 
     # What the client needs to redisplay the controls.
     def to_h
-      { status: status, preset: preset, from: from ? from.iso8601 : "", to: to ? to.iso8601 : "" }
+      { status: status, preset: preset, from: from ? from.iso8601 : "", to: to ? to.iso8601 : "", q: search }
     end
 
     private
@@ -75,10 +77,11 @@ class AssessmentDashboard
   def initialize(company:, filters:)
     @company = company
     @filters = filters
+    @search = AssessmentSearch.new(company, filters.search)
   end
 
   def call
-    raw_counts = dated_scope.group(:status).count
+    raw_counts = narrowed_scope.group(:status).count
     counts = fold(raw_counts)
     total = counts.fetch(@filters.status == "all" ? "all" : @filters.status)
     pages = [ (total / PER_PAGE.to_f).ceil, 1 ].max
@@ -90,10 +93,13 @@ class AssessmentDashboard
 
   private
 
-  def dated_scope
+  # The company's assessments in the date range that match the search. The
+  # status filter is applied separately, so the chips can show every status.
+  def narrowed_scope
     scope = @company.assessments
     range = @filters.date_range
-    range ? scope.where(created_at: range) : scope
+    scope = scope.where(created_at: range) if range
+    @search.present? ? @search.apply(scope) : scope
   end
 
   # Folds raw legacy spellings into { "all" => 64, "pending" => 6, ... }.
@@ -121,7 +127,7 @@ class AssessmentDashboard
   end
 
   def rows_for(page, raw_counts)
-    scope = dated_scope
+    scope = narrowed_scope
     scope = scope.where(status: raw_values_for(raw_counts)) unless @filters.status == "all"
 
     AssessmentRow.relation(scope)
