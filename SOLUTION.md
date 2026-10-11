@@ -343,6 +343,7 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 22 | New assessment | `ae41044` | The owner wanted to explore the app end to end (§8). Its tests found a real log leak (§12) |
 | 23 | Richer seeds | `a960fdb` | A third tenant and a second admin; production skips the seeds instead of aborting |
 | 24 | Railway config and the app guide | `90b92f5` | `railway.json`, `APP_GUIDE.md`, README rewrite; **the Railway path is untested**, see §11 |
+| 29 | Railway settings correction | this commit | the owner's Settings screenshots showed Config as Code is unavailable to new services, so `railway.json` is not read; the docs now say the Settings page is the configuration |
 | 28 | Boot prepares the database | this commit | the owner's second deploy: empty database plus the in-Puma job worker crashed on boot; `db:prepare db:seed` now runs from `config/puma.rb`, tested by starting the real server on an empty database |
 | 27 | Production database config | this commit | the owner's first Railway deploy failed with no `production` database configured; explicit block, readable boot error, tests that do not supply `DATABASE_URL` |
 | 26 | Rate-limit counters and tests | this commit | each limit named so counters don't collide; real cache in the test environment; `test/integration/rate_limit_test.rb` |

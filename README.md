@@ -234,14 +234,14 @@ walkthrough and every variable are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md); th
 > **Status, stated plainly:** the hosting configuration is written and checked, but I have **not deployed it to a live Railway project myself**
 > (no Docker or Railway account in my environment). The owner's first deploy found a real bug, now fixed: the `production:` block in `config/database.yml` was commented out, so production only worked when `DATABASE_URL` was set, and the app now stops with a clear message when it isn't. What *was* tested: the same commands run locally in production mode (release build,
 > `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and downloaded, the health check answering on IPv4 and IPv6),
-> and `railway.json` is checked by a test against the rules in Railway's published schema. Expect to read the first deploy's logs.
+> and `railway.json` (a legacy record of the intended settings, which a new Railway service does not read) is checked by a test against Railway's published schema. Expect to read the first deploy's logs.
 
 ### How it is hosted
 
 ```
  GitHub repository ──push──▶ Railway project
                               │
-                              ├─ App service  (built from the Dockerfile, configured by railway.json)
+                              ├─ App service  (built from the Dockerfile; configured on its Settings page)
                               │     1. build        Dockerfile: Ruby gems, Node only to compile the Vite/React bundle, assets precompiled
                               │     2. pre-deploy   bin/rails db:prepare db:seed     (creates/migrates tables; demo data only if allowed)
                               │     3. start        bin/rails server -b ::           (Puma; the job worker runs inside it)
@@ -278,7 +278,7 @@ troubleshooting are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md).
 ### Deploy in seven steps
 
 1. **Push this repository to GitHub.**
-2. In Railway: **New Project → Deploy from GitHub repo**, pick the repository. Railway finds the `Dockerfile` and reads [`railway.json`](railway.json). The first deploy stops with a missing-secret error until step 4. That is expected.
+2. In Railway: **New Project → Deploy from GitHub repo**, pick the repository. Railway finds the `Dockerfile` and builds it (the Builder box may say Railpack; the Dockerfile wins). The first deploy stops with a missing-secret error until step 4. That is expected.
 3. **Add the database:** **New → Database → Add PostgreSQL**.
 4. Open the app service → **Variables**, and add the variables above (use the **Raw Editor** to paste them in one go).
 5. **Storage:** create a **Volume** (⌘K or right-click the canvas), attach it to the app service and set its mount path to `/rails/storage`.
@@ -287,7 +287,7 @@ troubleshooting are in [`RAILWAY_SETUP.md`](RAILWAY_SETUP.md).
 
 **Changing or rolling back:** pushing to the connected branch deploys again. To go back, open the service's **Deployments** list, use the menu on an earlier deployment and choose **Rollback** (it restores the image and the variables).
 
-If Railway ignores `railway.json` (its documentation now describes config-as-code as a legacy feature), set the same four things in the service **Settings**:
+**`railway.json` is not what configures a new service.** Railway's own Settings page says: "Config as Code is deprecated … Starting 2026-08-28, services that have never used Config as Code cannot opt in." For a service created after that date, `railway.json` is **not read**, and the values on the Settings page are the only configuration. The file stays in the repository as a record of the intended values (and is guarded by a test), but you set these four things yourself in the service **Settings → Build / Deploy**:
 *Builder* = Dockerfile, *Pre-deploy command* = `bin/rails db:prepare db:seed`, *Start command* = `bin/rails server -b ::`, *Healthcheck path* = `/up`.
 
 **The brief's release plan is written for a "Heroku-like" platform** (`heroku pg:backups`, `heroku run`). On Railway the same plan applies: take the backup with `pg_dump` against the database's connection string (enable the Postgres service's *Public Access* to reach it from your machine), restore it into a scratch database to prove it, and run the rake tasks inside the deployed service with `railway ssh`. A Heroku `Procfile` and `app.json` are included too.

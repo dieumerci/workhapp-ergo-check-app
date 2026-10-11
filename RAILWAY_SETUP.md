@@ -19,7 +19,7 @@ how to check it works, and how to run things afterwards. The short version lives
 
 ```
  GitHub repository ─▶ Railway project
-                       ├─ "app" service   built from the Dockerfile, configured by railway.json
+                       ├─ "app" service   built from the Dockerfile, configured on its Settings page
                        │     pre-deploy:  bin/rails db:prepare db:seed
                        │     start:       bin/rails server -b ::      (Puma + the job worker inside it)
                        │     health:      GET /up  → 200
@@ -116,12 +116,12 @@ Never commit any of the values above. They live in Railway's Variables tab (and 
 
 ## 4. Set it up in the dashboard
 
-1. **Create the project.** Railway → **New Project → Deploy from GitHub repo** → choose the repository. Railway sees the `Dockerfile` and reads `railway.json` (builder: Dockerfile, pre-deploy, start command, health check).
+1. **Create the project.** Railway → **New Project → Deploy from GitHub repo** → choose the repository. Railway sees the `Dockerfile` and builds it (the Builder box may say Railpack; with a Dockerfile in the repository the Dockerfile is used, as the build log shows). **`railway.json` is not read for a new service** (see the next step), so the settings come from you.
    *The first deploy will stop with a missing `secret_key_base` message. That is expected; the variables come next.*
 2. **Add the database.** In the project canvas: **Create / New → Database → Add PostgreSQL**. Note the service's name (normally `Postgres`).
 3. **Add the variables.** Open the **app** service → **Variables** → **Raw Editor**, paste the block from section 3.1 (with your two values), and save.
 4. **Add storage.** A Volume mounted at `/rails/storage` (Option A: ⌘K or right-click the canvas, attach it to the app service, set the mount path) or the S3 variables (Option B).
-5. **Check the service's Settings before you rely on it.** Open the app service → **Settings** and confirm these four (they are what `railway.json` asks for; if Railway ignored the file, or a start command was typed in earlier, the values here win):
+5. **Set the service's Settings yourself.** Railway's own Settings page says: "Config as Code is deprecated … Starting 2026-08-28, services that have never used Config as Code cannot opt in." For a service created after that date, `railway.json` is **not read**, and the values on the Settings page are the only configuration. Open the app service → **Settings** and set these four (they are the values `railway.json` records):
    - **Builder:** Dockerfile
    - **Pre-deploy command:** `bin/rails db:prepare db:seed` (the recommended place to create the tables and the demo data. The web process also runs the same two tasks when it boots, so a missing pre-deploy command no longer leaves you with an empty database, but a failed pre-deploy is a clearer signal than a failed boot)
    - **Custom start command:** `bin/rails server -b ::` (or empty, so the image's own command runs). If you see `bundle exec puma -C config/puma.rb` here, that is the `Procfile` (the Heroku path); it neither prepares the database nor binds IPv6, so replace it.
@@ -208,7 +208,7 @@ Admin.find_by!(email: "maya.reyes@northwind.example").update!(password: "another
 
 The single-service setup runs jobs inside Puma. That is simplest, but a heavy export load can slow web requests. To separate them:
 
-1. In `railway.json`, **delete the `startCommand` line** (a `startCommand` there applies to *every* service of the repository, which would override the worker's), and set the web service's start command in its **Settings** to `bin/rails server -b ::`.
+1. Set the web service's **Custom Start Command** to `bin/rails server -b ::` in its **Settings** (if you also use a legacy `railway.json`, delete its `startCommand` line: it would apply to every service of the repository, including the worker).
 2. On the web service, **remove** `SOLID_QUEUE_IN_PUMA`.
 3. Add a second service from the same repository. Give it the same variables (`DATABASE_URL`, `SECRET_KEY_BASE` and the storage ones) and the start command **`bin/jobs`**.
 4. **Use S3 (Option B).** A volume belongs to one service, so a file built by the worker would not be visible to the web service.
@@ -240,7 +240,7 @@ The single-service setup runs jobs inside Puma. That is simplest, but a heavy ex
 | Demo companies are missing | `ALLOW_DEMO_SEED` is not `true`, or the pre-deploy step did not run. Check the deploy logs for `Skipping demo data in production`. |
 | I forgot the demo password | `railway ssh`, then `bin/rails console` and update the admin (section 7). |
 | `/release_plan` or `/safeguards` gives 404 | By design in production. Set `SHOW_OPS_PAGES=true`. |
-| Railway ignores `railway.json` | Railway's docs describe config-as-code as a legacy feature. Set the same values in **Settings**: Builder = Dockerfile · Pre-deploy command = `bin/rails db:prepare db:seed` · Start command = `bin/rails server -b ::` · Healthcheck path = `/up`. |
+| `railway.json` seems to have no effect | Correct: Config as Code is deprecated and unavailable to services created after 2026-08-28 (the Settings page says so). Set the values in **Settings**: Builder = Dockerfile (optional: the Dockerfile is used anyway) · **Pre-deploy Command** = `bin/rails db:prepare db:seed` · **Custom Start Command** = `bin/rails server -b ::` · **Healthcheck Path** = `/up`. |
 
 ## 12. What this guide cannot promise
 

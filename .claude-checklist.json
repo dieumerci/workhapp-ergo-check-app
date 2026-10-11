@@ -404,6 +404,11 @@
           "done": true
         },
         {
+          "id": "12.16",
+          "title": "Real Railway settings seen: Config as Code is unavailable to services created after 2026-08-28, so railway.json is not read; the docs now say the Settings page is the configuration",
+          "done": true
+        },
+        {
           "id": "12.10",
           "title": "Push to GitHub (waiting for the owner's go-ahead)",
           "done": false

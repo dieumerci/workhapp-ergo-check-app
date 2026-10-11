@@ -113,6 +113,7 @@ Findings raised by an independent read-only reviewer and by the audit; full deta
 - [x] 12.13 Rate limits covered by tests (11) and a shared-counter bug fixed: export previews no longer use up the export budget
 - [x] 12.14 First Railway deploy failed (`The production database is not configured`): the `production:` block in `config/database.yml` was commented out. Fixed, with a readable boot error and tests that run without `DATABASE_URL`; the Railway guide lists the service settings to check
 - [x] 12.15 Second Railway deploy: an empty database plus the in-Puma job worker crashed on boot (`relation solid_queue_recurring_tasks does not exist`). The web process now prepares the database itself, tested by starting the real server against an empty database
+- [x] 12.16 Real Railway settings seen: Config as Code is unavailable to services created after 2026-08-28, so `railway.json` is not read; the docs now say the Settings page is the configuration (pre-deploy command, start command, healthcheck path)
 - [ ] 12.10 Push to GitHub: waiting for the owner's go-ahead (no remote is configured)
 
 ## Out of scope (quarantined)
