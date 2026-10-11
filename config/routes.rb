@@ -19,6 +19,8 @@ Rails.application.routes.draw do
     end
   end
 
+  post "assistant", to: "assistants#create"
+
   get "safeguards", to: "safeguards#show"
   get "release_plan", to: "release_plans#show"
   get "release_plan/normalize", to: "release_plans#normalize"

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Head, router, usePage } from '@inertiajs/react'
 import AssessmentTable from '@/components/assessments/AssessmentTable'
+import AskAssistant from '@/components/assessments/AskAssistant'
 import DetailDrawer from '@/components/assessments/DetailDrawer'
 import FilterBar from '@/components/assessments/FilterBar'
 import LegacyDataNote from '@/components/assessments/LegacyDataNote'
@@ -115,6 +116,8 @@ export default function Index({ filters, assessments, counts, legacy, pagination
             onClear={clear}
           />
         </div>
+
+        <AskAssistant filters={filters} onApply={(next) => visit(next)} onExport={(initial) => openExport(initial)} />
 
         {legacy && <LegacyDataNote legacy={legacy} />}
 

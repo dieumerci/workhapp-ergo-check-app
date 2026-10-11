@@ -48,6 +48,15 @@ export function SearchIcon(props: IconProps) {
   )
 }
 
+export function ChatIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 4.6A1.6 1.6 0 0 1 4.1 3h7.8a1.6 1.6 0 0 1 1.6 1.6v5a1.6 1.6 0 0 1-1.6 1.6H7.4L4.6 13.5v-2.3h-.5a1.6 1.6 0 0 1-1.6-1.6v-5Z" />
+      <path d="M5.5 6.4h5M5.5 8.4h3" />
+    </svg>
+  )
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <svg {...base(props)} strokeWidth={1.8} strokeLinecap="round">

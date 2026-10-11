@@ -47,6 +47,15 @@ module ActiveSupport
       Rails.logger, ActionController::Base.logger, ActiveRecord::Base.logger, ActiveJob::Base.logger, ActiveStorage.logger = previous
     end
 
+    # Runs the block with environment variables set (nil removes one), then restores them.
+    def with_env(vars)
+      saved = vars.keys.index_with { |key| ENV[key] }
+      vars.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+      yield
+    ensure
+      saved.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    end
+
     SECTION_KEYS = %w[workstation_setup posture_movement breaks_recovery discomfort_reported].freeze
 
     def sections_json(*values)

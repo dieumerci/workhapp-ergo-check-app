@@ -48,6 +48,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const { auth, exports, ops_pages } = page.props
   const activeExports = exports.filter(isActive).length
   const path = page.url.split('?')[0]
+  // "/" and "/assessments" are the same page; keying the content on the raw path would
+  // remount it (and drop its local state) the first time a filter moves it from one to the other.
+  const routeKey = path === '/' ? '/assessments' : path
   const [cookieDialogOpen, setCookieDialogOpen] = useState(false)
   const items = NAV.filter((item) => ops_pages || !item.ops)
 
@@ -113,7 +116,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               Showing your company only
             </span>
           </div>
-          <div key={path} className="animate-rise">
+          <div key={routeKey} className="animate-rise">
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </main>

@@ -20,6 +20,9 @@ class InertiaController < ApplicationController
 
   inertia_share ops_pages: -> { Rails.configuration.x.ops_pages }
 
+  # Whether the optional assistant is on, and who would see a question.
+  inertia_share assistant: -> { Assistant.public_info }
+
   # Marks a controller as an internal ops page: 404 unless SHOW_OPS_PAGES is on.
   def self.ops_only
     before_action { head :not_found unless Rails.configuration.x.ops_pages }

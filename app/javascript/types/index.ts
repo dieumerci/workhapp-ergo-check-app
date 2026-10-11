@@ -24,6 +24,8 @@ export type SharedProps = {
   status_options: StatusOption[]
   score_sections: ScoreSection[]
   ops_pages: boolean
+  // Off unless a key (or the offline rules) is configured on the server.
+  assistant: { enabled: false } | { enabled: true; provider: string; offline: boolean }
 }
 
 export type StatusValue =
