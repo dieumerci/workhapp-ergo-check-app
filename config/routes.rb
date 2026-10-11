@@ -9,7 +9,7 @@ Rails.application.routes.draw do
   end
 
   root "assessments#index"
-  resources :assessments, only: %i[index update]
+  resources :assessments, only: %i[index create update]
 
   resources :exports, only: %i[index create] do
     collection { get :preview }

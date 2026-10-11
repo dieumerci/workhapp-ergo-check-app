@@ -38,3 +38,11 @@ export function CloseIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8} strokeLinecap="round">
+      <path d="M8 3v10M3 8h10" />
+    </svg>
+  )
+}

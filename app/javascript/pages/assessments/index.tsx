@@ -3,8 +3,9 @@ import { Head, router, usePage } from '@inertiajs/react'
 import AssessmentTable from '@/components/assessments/AssessmentTable'
 import DetailDrawer from '@/components/assessments/DetailDrawer'
 import FilterBar from '@/components/assessments/FilterBar'
+import NewAssessmentDialog from '@/components/assessments/NewAssessmentDialog'
 import Pager from '@/components/assessments/Pager'
-import { DownloadIcon } from '@/components/Icons'
+import { DownloadIcon, PlusIcon } from '@/components/Icons'
 import { useExports } from '@/components/exports/ExportProvider'
 import type { AssessmentRow, AssessmentsIndexProps, Filters } from '@/types/assessments'
 
@@ -25,10 +26,11 @@ function buildQuery(filters: Filters, page = 1): Query {
 // Wait a beat before showing the skeleton so fast responses don't flash it.
 const SKELETON_DELAY_MS = 150
 
-export default function Index({ filters, assessments, counts, pagination, selected }: AssessmentsIndexProps) {
+export default function Index({ filters, assessments, counts, pagination, selected, employees }: AssessmentsIndexProps) {
   const { status_options } = usePage().props
   const { openExport } = useExports()
   const [loading, setLoading] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const visit = (next: Partial<Filters>, page = 1) => {
@@ -61,6 +63,12 @@ export default function Index({ filters, assessments, counts, pagination, select
       preserveState: true,
     })
 
+  // The employee list is not part of the dashboard load; fetch it as the dialog opens.
+  const openNew = () => {
+    setNewOpen(true)
+    router.reload({ only: ['employees'] })
+  }
+
   const hasFilters = filters.status !== 'all' || filters.preset !== 'all'
 
   return (
@@ -72,14 +80,24 @@ export default function Index({ filters, assessments, counts, pagination, select
             <h1 className="text-[28px] font-bold tracking-tight">Assessments</h1>
             <div className="mt-0.5 text-muted">Ergonomic and health assessments for your employees.</div>
           </div>
-          <button
-            type="button"
-            onClick={() => openExport({ from: filters.from, to: filters.to, status: filters.status })}
-            className="inline-flex items-center gap-2 rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
-          >
-            <DownloadIcon size={15} />
-            Export CSV
-          </button>
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              onClick={openNew}
+              className="inline-flex items-center gap-2 rounded-[9px] border border-control bg-white px-4 py-2.5 text-sm font-semibold hover:bg-hover"
+            >
+              <PlusIcon size={15} />
+              New assessment
+            </button>
+            <button
+              type="button"
+              onClick={() => openExport({ from: filters.from, to: filters.to, status: filters.status })}
+              className="inline-flex items-center gap-2 rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark"
+            >
+              <DownloadIcon size={15} />
+              Export CSV
+            </button>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-[14px] border border-line bg-white">
@@ -97,6 +115,7 @@ export default function Index({ filters, assessments, counts, pagination, select
       </section>
 
       <DetailDrawer detail={selected} statusOptions={status_options} onClose={closeDetail} />
+      <NewAssessmentDialog open={newOpen} employees={employees} onClose={() => setNewOpen(false)} />
     </>
   )
 }

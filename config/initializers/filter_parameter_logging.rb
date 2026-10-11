@@ -9,10 +9,14 @@
 #   :responses, :answers      raw assessment answers (matches responses_json and friends)
 #   :free_text                free-text answers
 #   :captcha                  the sign-in verification code
+#   /\Aname\z/                a bare `name` column or parameter (employee and admin names).
+#                             SQL bind logging only honours this global list, not a
+#                             model's own filter_attributes, so without it the INSERT
+#                             for a new employee logs the name in clear at DEBUG level.
 #   passw/secret/token/...    the Rails defaults
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text
+  :captcha, :employee_email, :employee_name, :responses, :answers, :free_text, /\Aname\z/
 ]
 
 # Rails logs every redirect target ("Redirected to ..."). The export download

@@ -30,10 +30,15 @@ export type Counts = Record<StatusValue | 'all', number>
 
 export type Pagination = { page: number; pages: number; total: number; per_page: number }
 
+// One of the signed-in company's employees, offered by the "New assessment" dialog.
+export type EmployeeOption = { id: number; name: string; department: string | null }
+
 export type AssessmentsIndexProps = {
   filters: Filters
   assessments: AssessmentRow[]
   counts: Counts
   pagination: Pagination
   selected: AssessmentDetail | null
+  // Only present after the dialog asked for it (a partial reload).
+  employees?: EmployeeOption[]
 }

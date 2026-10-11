@@ -1,6 +1,9 @@
 import type { ExportView } from '@/types/exports'
 
-export type StatusOption = { value: StatusValue; label: string }
+// `scored`: the status shows an ergonomic score (so section scores can be entered for it).
+export type StatusOption = { value: StatusValue; label: string; scored: boolean }
+
+export type ScoreSection = { key: string; label: string }
 
 export type FlashData = {
   notice?: string
@@ -19,6 +22,7 @@ export type SharedProps = {
   exports: ExportView[]
   export_columns: string[]
   status_options: StatusOption[]
+  score_sections: ScoreSection[]
   ops_pages: boolean
 }
 

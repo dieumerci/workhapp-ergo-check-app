@@ -12,7 +12,10 @@ class InertiaController < ApplicationController
   inertia_share exports: -> { exports_payload }
 
   # Single server-side definitions the UI renders from (filters, drawer, export dialog).
-  inertia_share status_options: -> { Status::CANONICAL.map { |value| { value: value, label: Status.label(value) } } }
+  inertia_share status_options: -> {
+    Status::CANONICAL.map { |value| { value: value, label: Status.label(value), scored: Status.scored?(value) } }
+  }
+  inertia_share score_sections: -> { ScoreCalculator::SECTIONS.map { |key, label| { key: key, label: label } } }
   inertia_share export_columns: -> { AssessmentExports::Builder::COLUMNS }
 
   inertia_share ops_pages: -> { Rails.configuration.x.ops_pages }
