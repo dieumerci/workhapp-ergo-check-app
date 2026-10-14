@@ -9,6 +9,13 @@ const FOCUSABLE =
 // stacked dialogs close one at a time and focus cannot wander into a lower one.
 const openDialogs: symbol[] = []
 
+// Page scroll is locked while any dialog is open. The lock belongs to the stack, not to each dialog:
+// two can overlap and close in either order (a "created" redirect opens the detail sheet before the
+// form dialog finishes closing), and saving and restoring the value per dialog would then leave the
+// page locked for good. So the original value is saved when the first one opens and put back when
+// the last one closes.
+let bodyOverflowBeforeLock = ''
+
 type DialogProps = {
   open: boolean
   onClose: () => void
@@ -33,12 +40,12 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
     if (!open) return
 
     const id = Symbol('dialog')
+    if (openDialogs.length === 0) bodyOverflowBeforeLock = document.body.style.overflow
     openDialogs.push(id)
     const appRoot = document.getElementById('app')
     appRoot?.setAttribute('inert', '')
 
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     panel.current?.focus()
 
@@ -78,8 +85,10 @@ export default function Dialog({ open, onClose, labelledBy, variant = 'modal', c
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       openDialogs.splice(openDialogs.indexOf(id), 1)
-      if (openDialogs.length === 0) appRoot?.removeAttribute('inert')
-      document.body.style.overflow = previousOverflow
+      if (openDialogs.length === 0) {
+        appRoot?.removeAttribute('inert')
+        document.body.style.overflow = bodyOverflowBeforeLock
+      }
       previouslyFocused?.focus?.()
     }
   }, [open])
