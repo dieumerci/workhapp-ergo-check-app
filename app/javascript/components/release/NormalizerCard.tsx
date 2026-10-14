@@ -3,13 +3,15 @@ import { Section } from '@/components/ui'
 import { cx } from '@/lib/cx'
 import type { NormalizeResult } from '@/types/release'
 
-const sampleLabel = (value: string) => (value === '' ? '(empty)' : value)
+const sampleLabel = (value: string) => (value.trim() === '' ? '(empty)' : value)
 
 // Sends what is typed to the server, which runs it through the same Status
 // rules the save path and the backfill use, so this can never disagree with them.
 export default function NormalizerCard({ samples }: { samples: string[] }) {
   const [value, setValue] = useState(samples[0] ?? '')
-  const [result, setResult] = useState<NormalizeResult | null>(null)
+  // The answer is kept with the value it was computed for, so the page can say what it checked
+  // (two different spellings often give the same tiles, which would otherwise look like nothing happened).
+  const [result, setResult] = useState<(NormalizeResult & { checked: string }) | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function NormalizerCard({ samples }: { samples: string[] }) {
           credentials: 'same-origin',
           signal: controller.signal,
         })
-        setResult((await response.json()) as NormalizeResult)
+        setResult({ ...((await response.json()) as NormalizeResult), checked: value })
         setFailed(false)
       } catch (error) {
         if ((error as Error).name !== 'AbortError') setFailed(true)
@@ -61,16 +63,23 @@ export default function NormalizerCard({ samples }: { samples: string[] }) {
       {failed && <p className="text-[13px] text-danger">Could not reach the server to check that value.</p>}
 
       {result && (
-        <div aria-live="polite" className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[20px] bg-ink/5 px-5 py-4">
-            <div className="eyebrow">Historical backfill</div>
-            <div className="mt-2 text-[17px] font-semibold">{result.backfill.label}</div>
-            <div className="mt-1 text-[13px] text-muted">{result.backfill.why}</div>
-          </div>
-          <div className={cx('rounded-[20px] px-5 py-4', result.save.accepted ? 'bg-ok-tint text-ok' : 'bg-danger-tint text-danger')}>
-            <div className="eyebrow !text-current">New or updated record</div>
-            <div className="mt-2 text-[17px] font-semibold">{result.save.title}</div>
-            <div className="mt-1 text-[13px]">{result.save.why}</div>
+        <div aria-live="polite" className="flex flex-col gap-3">
+          <p className="text-[13px] text-muted">
+            {result.checked === value ? 'Result for' : 'Checking'}{' '}
+            <code className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-xs text-ink">{sampleLabel(value)}</code>
+            {result.checked === value ? '' : '…'}
+          </p>
+          <div className={cx('grid gap-3 transition-opacity duration-150 sm:grid-cols-2', result.checked !== value && 'opacity-50')}>
+            <div className="rounded-[20px] bg-ink/5 px-5 py-4">
+              <div className="eyebrow">Historical backfill</div>
+              <div className="mt-2 text-[17px] font-semibold">{result.backfill.label}</div>
+              <div className="mt-1 text-[13px] text-muted">{result.backfill.why}</div>
+            </div>
+            <div className={cx('rounded-[20px] px-5 py-4', result.save.accepted ? 'bg-ok-tint text-ok' : 'bg-danger-tint text-danger')}>
+              <div className="eyebrow !text-current">New or updated record</div>
+              <div className="mt-2 text-[17px] font-semibold">{result.save.title}</div>
+              <div className="mt-1 text-[13px]">{result.save.why}</div>
+            </div>
           </div>
         </div>
       )}
