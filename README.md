@@ -131,7 +131,7 @@ To run locally with the same variables you set on the hosting platform, put them
 It is deliberately narrow, because the data is health data: the model is sent only your question, today's date, the allowed values and your department
 names (never an employee name, e-mail, answer, score or assessment); it can only set filters or propose an export, and everything it returns is validated;
 it cannot read data, write data or create an export; the question is filtered from the logs. The provider calls are tested against a stand-in for the
-network and **have not been run against the live APIs**; the offline mode was exercised end to end. Details in `SOLUTION.md` §14.
+network; the **Anthropic** call was also tried by hand against the live API (two questions, see `SOLUTION.md` §14) and the **OpenAI** call has **not** been run live; the offline mode was exercised end to end. Details in `SOLUTION.md` §14.
 
 ### Quality gates
 
