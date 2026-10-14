@@ -55,3 +55,6 @@ node_modules
 # Local working notes that are not part of the submission.
 /docs/
 /.claude-checklist.json
+
+# macOS
+.DS_Store
