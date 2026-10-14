@@ -366,6 +366,63 @@ class ExportsTest < ActionDispatch::IntegrationTest
     assert_equal "expired", props[:exports].first[:state]
   end
 
+  # ---- the link on every row, with its countdown -------------------------------
+
+  test "every export has a link of its own, whatever state it is in, and a countdown once it is ready" do
+    queued = AssessmentExport.create!(company: @company, admin: @admin)
+    failed = AssessmentExport.create!(company: @company, admin: @admin).tap { |export| export.mark_failed!("timeout") }
+    ready = ready_export
+    expired = ready_export.tap { |export| export.update_columns(expires_at: 1.minute.ago) }
+    theirs = ready_export(company: @other_company, admin: @other_admin)
+    sign_in_as(@admin)
+
+    get exports_path
+
+    rows = props[:exports].index_by { |row| row[:id] }
+    assert_equal [ queued, failed, ready, expired ].map(&:id).sort, rows.keys.sort, "only this company's exports are listed"
+    assert_not_includes rows.keys, theirs.id
+    assert_equal rows.values.map { |row| row[:link_path] }.uniq.size, rows.size, "each link is unique to its export"
+    rows.each { |id, row| assert_equal download_export_path(id), row[:link_path] }
+
+    assert_nil rows[queued.id][:expires_in]
+    assert_nil rows[failed.id][:expires_in]
+    assert_in_delta 24.hours.to_i, rows[ready.id][:expires_in], 5
+    assert_equal 0, rows[expired.id][:expires_in]
+    assert_nil rows[expired.id][:download_path], "the link stays on the row, the download button does not"
+  end
+
+  test "a colleague at the same company can use the link, another company gets a 404" do
+    export = ready_export
+    colleague = create_admin(company: @company, name: "Daniel Osei", email: "daniel@example.com")
+    link = download_export_path(export)
+
+    sign_in_as(colleague)
+    get link
+    assert_response :redirect, "a colleague at the same company can use it"
+    assert_includes response.location, "/rails/active_storage/"
+
+    delete session_path
+    sign_in_as(@other_admin)
+    get link
+    assert_response :not_found
+    assert_no_match(/#{Regexp.escape(@company.name)}|assessments-/, response.body, "the 404 says nothing about the export")
+    assert_equal 1, export.reload.download_count, "the refused request was not counted"
+  end
+
+  test "the 404 for another company's export is the same page as for one that never existed" do
+    theirs = ready_export(company: @other_company, admin: @other_admin)
+    sign_in_as(@admin)
+
+    get download_export_path(theirs)
+    foreign = [ response.status, response.media_type, response.body ]
+    get download_export_path(AssessmentExport.maximum(:id) + 1000)
+    missing = [ response.status, response.media_type, response.body ]
+
+    assert_equal 404, foreign.first
+    assert_equal foreign, missing
+    assert_match(/We can&rsquo;t find that/, foreign.last)
+  end
+
   # ---- audit trail: who exported, and how often it was fetched ----------------
 
   def ready_export(company: @company, admin: @admin)

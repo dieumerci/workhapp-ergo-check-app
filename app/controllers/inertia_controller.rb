@@ -41,7 +41,12 @@ class InertiaController < ApplicationController
     return [] unless Current.company
 
     Current.company.assessment_exports.with_attached_file.includes(:admin).recent.limit(20).map do |export|
-      export.to_view.merge(download_path: export.downloadable? ? download_export_path(export) : nil)
+      # link_path is on every row, whatever its state: it is the export's own address, and it only ever works for
+      # admins of the company that owns it (anyone else gets a 404). download_path is set only while there is a file to fetch.
+      export.to_view.merge(
+        link_path: download_export_path(export),
+        download_path: export.downloadable? ? download_export_path(export) : nil
+      )
     end
   end
 end

@@ -74,6 +74,31 @@ class AssessmentExportTest < ActiveSupport::TestCase
     end
   end
 
+  test "expires_in is the seconds the link still works: nothing until ready, then a countdown to zero" do
+    record = export
+    assert_nil record.to_view[:expires_in], "a queued export has no file yet, so nothing is counting down"
+    assert_nil record.to_view[:expires_at]
+
+    record.file.attach(io: StringIO.new("a,b\n"), filename: "x.csv", content_type: "text/csv")
+    record.mark_ready!(row_count: 1)
+    assert_in_delta 24.hours.to_i, record.to_view[:expires_in], 5
+    assert_equal record.expires_at.iso8601, record.to_view[:expires_at]
+
+    travel_to 10.hours.from_now do
+      assert_in_delta 14.hours.to_i, record.to_view[:expires_in], 5
+    end
+    travel_to 25.hours.from_now do
+      assert_equal 0, record.to_view[:expires_in], "never negative"
+    end
+  end
+
+  test "a failed export has no countdown" do
+    record = export
+    record.mark_failed!("timeout")
+
+    assert_nil record.to_view[:expires_in]
+  end
+
   test "failures are shown as generic messages" do
     record = export
     record.mark_failed!("timeout")
@@ -86,7 +111,7 @@ class AssessmentExportTest < ActiveSupport::TestCase
   test "the view carries no employee data, only the requesting admin's name and the audit counters" do
     view = export(from_date: Date.new(2026, 9, 1), to_date: Date.new(2026, 9, 30), status_filter: "completed").to_view
 
-    assert_equal %i[can_retry download_count error from id last_downloaded_at progress requested_at requested_by row_count state state_label status status_label to],
+    assert_equal %i[can_retry download_count error expires_at expires_in from id last_downloaded_at progress requested_at requested_by row_count state state_label status status_label to],
                  view.keys.sort
     assert_equal "Completed", view[:status_label]
     assert_equal 0, view[:download_count]

@@ -135,9 +135,20 @@ class AssessmentExport < ApplicationRecord
       requested_by: admin.name,
       download_count: download_count,
       last_downloaded_at: last_downloaded_at&.iso8601,
+      expires_at: expires_at&.iso8601,
+      expires_in: seconds_until_expiry,
       error: error_message,
       can_retry: failed? || expired? || stalled?
     }
+  end
+
+  # How long the download link still works, in seconds, for the countdown on the Exports page. The 24 hours
+  # start when the file is ready, so this is nil before then (and for a failed export, which has no file).
+  # It is a duration rather than a date so the page counts down from the server's clock, not the browser's.
+  def seconds_until_expiry
+    return unless ready? && expires_at
+
+    [ (expires_at - Time.current).ceil, 0 ].max
   end
 
   # A fresh export with the same two filters (used by "Retry").
