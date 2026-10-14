@@ -3,25 +3,25 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
-      "fingerprint": "a1c1aa0850dd7c9971e98be994fe84f9054a7e4ed212cba45b1ea9a122d0c631",
+      "fingerprint": "bccce1192600b69ccc6d15176990bcafd128e0cf2841d7f4b23a651f31f42275",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
       "file": "app/controllers/exports_controller.rb",
-      "line": 41,
+      "line": 54,
       "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
-      "code": "redirect_to(Current.company.assessment_exports.find(params[:id]).download_url, :allow_other_host => true)",
+      "code": "redirect_to(Current.company.assessment_exports.find_by(:id => params[:id]).download_url, :allow_other_host => true)",
       "render_path": null,
       "location": {
         "type": "method",
         "class": "ExportsController",
         "method": "download"
       },
-      "user_input": "Current.company.assessment_exports.find(params[:id]).download_url",
+      "user_input": "Current.company.assessment_exports.find_by(:id => params[:id]).download_url",
       "confidence": "Weak",
       "cwe_id": [
         601
       ],
-      "note": "False positive. The redirect target is not request input: it is a one-minute signed storage URL that Active Storage generates (AssessmentExport#download_url) only after the export was found through Current.company and checked with #downloadable?. allow_other_host is required because in production the file is served from object storage (S3) on another host. Covered by test/integration/exports_test.rb."
+      "note": "False positive. The redirect target is not request input: it is a one-minute signed storage URL that Active Storage generates (AssessmentExport#download_url) only after the export was found through Current.company (a missing or foreign id never gets here) and checked with #downloadable?. allow_other_host is required because in production the file is served from object storage (S3) on another host. Covered by test/integration/exports_test.rb."
     }
   ],
   "brakeman_version": "8.1.0"

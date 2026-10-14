@@ -41,14 +41,19 @@ class ExportsController < InertiaController
 
   # Authorises, then hands the browser a one-minute signed storage link, so the
   # file never streams through the Rails process.
+  #
+  # A link that is not yours looks exactly like one that has expired. The lookup stays inside the
+  # signed-in company, so another company's export, an id that never existed and a download that
+  # really has expired all get the same redirect and the same message. Nothing here can tell someone
+  # else's export from a missing one, and a link passed to the wrong person simply "expires".
   def download
-    export = Current.company.assessment_exports.find(params[:id])
+    export = Current.company.assessment_exports.find_by(id: params[:id])
 
-    if export.downloadable?
+    if export&.downloadable?
       export.record_download!
       redirect_to export.download_url, allow_other_host: true
-    elsif export.expired?
-      redirect_to exports_path, alert: "That download has expired. Request a new export."
+    elsif export.nil? || export.expired?
+      redirect_to exports_path, alert: "That download link has expired. Request a new export."
     else
       redirect_to exports_path, alert: "That export isn't ready yet."
     end
