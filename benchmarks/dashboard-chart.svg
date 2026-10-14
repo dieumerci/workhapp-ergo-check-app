@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 430" width="780" height="430" role="img" aria-labelledby="t d" font-family="Instrument Sans, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+<title id="t">Dashboard load time as a company grows, before and after</title>
+<desc id="d">Log-scale line chart. The replay of the inherited page grows from 1.4 seconds at 5,000 assessments to 94.5 seconds at 300,000. The shipped page stays between 3 and 23 milliseconds.</desc>
+<rect width="780" height="430" rx="20" fill="#fafbfa"/>
+<text x="86" y="40" font-size="20" font-weight="700" fill="#18201c">Time to load the dashboard, as a company grows</text>
+<text x="86" y="62" font-size="13" fill="#56615b">One company inside a larger table. Log scale: each gridline is ten times the one below it.</text>
+<line x1="86" y1="356.0" x2="740" y2="356.0" stroke="#e3e7e5"/>
+<text x="74" y="360.0" font-size="12" text-anchor="end" fill="#56615b">1 ms</text>
+<line x1="86" y1="302.0" x2="740" y2="302.0" stroke="#e3e7e5"/>
+<text x="74" y="306.0" font-size="12" text-anchor="end" fill="#56615b">10 ms</text>
+<line x1="86" y1="248.0" x2="740" y2="248.0" stroke="#e3e7e5"/>
+<text x="74" y="252.0" font-size="12" text-anchor="end" fill="#56615b">100 ms</text>
+<line x1="86" y1="194.0" x2="740" y2="194.0" stroke="#e3e7e5"/>
+<text x="74" y="198.0" font-size="12" text-anchor="end" fill="#56615b">1 s</text>
+<line x1="86" y1="140.0" x2="740" y2="140.0" stroke="#e3e7e5"/>
+<text x="74" y="144.0" font-size="12" text-anchor="end" fill="#56615b">10 s</text>
+<line x1="86" y1="86.0" x2="740" y2="86.0" stroke="#e3e7e5"/>
+<text x="74" y="90.0" font-size="12" text-anchor="end" fill="#56615b">100 s</text>
+<text x="167.8" y="384" font-size="13" text-anchor="middle" fill="#39443f">5,000 rows</text>
+<text x="331.2" y="384" font-size="13" text-anchor="middle" fill="#39443f">25,000 rows</text>
+<text x="494.8" y="384" font-size="13" text-anchor="middle" fill="#39443f">100,000 rows</text>
+<text x="658.2" y="384" font-size="13" text-anchor="middle" fill="#39443f">300,000 rows</text>
+<polyline points="167.8,185.4 331.2,147.9 494.8,114.4 658.2,87.3" fill="none" stroke="#9a3320" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="167.8" cy="185.4" r="5" fill="#ffffff" stroke="#9a3320" stroke-width="3"/>
+<text x="167.8" y="171.4" font-size="13" font-weight="700" text-anchor="middle" fill="#9a3320">1.4 s</text>
+<circle cx="331.2" cy="147.9" r="5" fill="#ffffff" stroke="#9a3320" stroke-width="3"/>
+<text x="331.2" y="133.9" font-size="13" font-weight="700" text-anchor="middle" fill="#9a3320">7.2 s</text>
+<circle cx="494.8" cy="114.4" r="5" fill="#ffffff" stroke="#9a3320" stroke-width="3"/>
+<text x="494.8" y="100.4" font-size="13" font-weight="700" text-anchor="middle" fill="#9a3320">29.8 s</text>
+<circle cx="658.2" cy="87.3" r="5" fill="#ffffff" stroke="#9a3320" stroke-width="3"/>
+<text x="658.2" y="73.3" font-size="13" font-weight="700" text-anchor="middle" fill="#9a3320">94.5 s</text>
+<polyline points="167.8,330.2 331.2,323.5 494.8,307.2 658.2,282.5" fill="none" stroke="#0e6b5c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="167.8" cy="330.2" r="5" fill="#ffffff" stroke="#0e6b5c" stroke-width="3"/>
+<text x="167.8" y="354.2" font-size="13" font-weight="700" text-anchor="middle" fill="#0e6b5c">3 ms</text>
+<circle cx="331.2" cy="323.5" r="5" fill="#ffffff" stroke="#0e6b5c" stroke-width="3"/>
+<text x="331.2" y="347.5" font-size="13" font-weight="700" text-anchor="middle" fill="#0e6b5c">4 ms</text>
+<circle cx="494.8" cy="307.2" r="5" fill="#ffffff" stroke="#0e6b5c" stroke-width="3"/>
+<text x="494.8" y="331.2" font-size="13" font-weight="700" text-anchor="middle" fill="#0e6b5c">8 ms</text>
+<circle cx="658.2" cy="282.5" r="5" fill="#ffffff" stroke="#0e6b5c" stroke-width="3"/>
+<text x="658.2" y="306.5" font-size="13" font-weight="700" text-anchor="middle" fill="#0e6b5c">23 ms</text>
+<g font-size="13" fill="#18201c"><rect x="452" y="206" width="268" height="52" rx="12" fill="#ffffff" stroke="#e3e7e5"/><circle cx="470" cy="224" r="5" fill="#fff" stroke="#9a3320" stroke-width="3"/><text x="484" y="228">Before: a replay of the inherited page</text><circle cx="470" cy="246" r="5" fill="#fff" stroke="#0e6b5c" stroke-width="3"/><text x="484" y="250">After: the shipped page (2 queries)</text></g>
+</svg>

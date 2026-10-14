@@ -1,38 +1,49 @@
-# ErgoCheck — assessments admin
+# ErgoCheck: assessments admin
 
 A multi-tenant console where a company's admins review their employees' ergonomic and health assessments and export them safely.
-It is built as the answer to the *"Safely extending a legacy Rails feature"* take-home, which asks for three targeted changes to an
-old Rails app, without rewrites:
+It is my answer to OfferZen's *"Safely extending a legacy Rails feature"* take-home: three targeted changes to an old Rails app,
+made with restraint and without rewrites.
 
-| Task | What you get |
+| | |
 |---|---|
-| **1. Company-scoped CSV export** | Export your own company's assessments with exactly two filters (date range, status). Built in the background; personal identifiers and free-text answers never leave the system. |
-| **2. A faster dashboard with a correct score** | Server-side filtering and paging, two measured indexes, one grouped count instead of N+1 queries. Score is always the rounded average of four section scores, or an honest "Not scored yet". |
-| **3. Status normalization** | New and updated records only ever hold `pending`, `in_progress`, `completed`, `needs_follow_up` or `archived`. The historical backfill is **designed, tested and guarded, but not executed**. |
+| **Live app** | <https://web-production-f3e069.up.railway.app/> (sign in with a [demo account](#try-it)) |
+| **Design, trade-offs, measurements, release and rollback plan** | [`SOLUTION.md`](SOLUTION.md) |
+| **How AI tools were used** | [`SOLUTION.md` §17](SOLUTION.md#17-how-i-used-ai-tools) |
+| **Video walkthrough** | linked in the submission e-mail |
 
-Enhancements that follow from those tasks:
-- an **export audit trail** (who requested each export, how often it was downloaded), with **a link of its own on every export and a live countdown to when it expires**; the link opens only for admins of the owning company, and anyone else gets a designed 404;
+**Contents:** [What was asked](#what-was-asked-and-what-you-get) · [Try it](#try-it) · [Architecture](#architecture) ·
+[Is it fully functional?](#is-it-fully-functional) · [Run it locally](#run-it-locally) · [Hosting on Railway](#hosting-on-railway) ·
+[Where things live](#where-things-live)
+
+**Stack:** Ruby 3.3 · Rails 8.1 · PostgreSQL · Inertia.js 3 · React 19 · TypeScript (strict) · Vite 8 · Tailwind CSS 4 ·
+Active Storage · Solid Queue · Minitest. Fonts are self-hosted (Instrument Sans and Serif, IBM Plex Mono).
+
+## What was asked, and what you get
+
+| Task | What you get | How it was checked |
+|---|---|---|
+| **1. Company-scoped CSV export** | Export your own company's assessments with exactly two filters (date range, status), built in the background. Six columns; personal identifiers and free-text answers never leave the system. | Tenant tests that send a rival company id; a test that reads the SQL to prove names are never loaded; the real file inspected for e-mail addresses (zero). |
+| **2. A faster dashboard with a correct score** | Two queries per page (one grouped count, one page of ten rows), two measured indexes, one score rule, and request logs that no longer carry health data. | **94.5 s and 300,001 queries before, 23 ms and 2 queries after**, on a 300,000-assessment company; a query-count test keeps it at two. |
+| **3. Status normalization** | New and updated records only ever hold `pending`, `in_progress`, `completed`, `needs_follow_up` or `archived`. The historical backfill is **designed, tested and guarded, but not executed**, with an eight-step release plan and rollback ladder. | A test proves the SQL mapping agrees with the Ruby one on awkward input; the backfill's rollback keeps later edits. |
+
+**Improvements that follow from the tasks:**
+
+- an **export audit trail** (who requested each export, how often it was downloaded) with **a link of its own on every export and a live countdown to when it expires**. The link opens only for admins of the company that owns it; anyone else gets a designed 404;
 - a **legacy-data note** (how much of the history still uses old status spellings, shown instead of hidden);
 - **search** (by employee, department or assessment code), company-scoped, never logged, never part of an export;
 - a **redesigned interface** (floating navigation, a design system in tokens, mobile-first sheets, a snow-white canvas);
-- an optional **assistant** ("ask in plain English"), off unless you set a key, that can only set filters or propose an export.
+- an optional **assistant** ("Ask in plain English"), off unless you set a key, that can only set filters or propose an export.
 
-Plus three extras beyond the brief: a **self-hosted CAPTCHA** on sign-in, a **cookie-consent** feature, and a small
-**New assessment** form so the app can be explored end to end. How I approached a ten-year-old application, why Rails,
-PostgreSQL and Inertia suit it, how I would upgrade one, and what I would build next are in `SOLUTION.md` (§1.1, §13 to §16).
+Plus three extras beyond the brief: a **self-hosted CAPTCHA** on sign-in, **cookie consent**, and a small **New assessment** form so the app can be explored end to end.
+How I approached a ten-year-old application, how I would upgrade one, and what I would build next are in `SOLUTION.md` (§1.1, §13 to §16).
 
-**Design, measurements and the release and rollback plan:** [`SOLUTION.md`](SOLUTION.md).
+## Try it
 
-**Contents:** [Try it: demo sign-in](#try-it-demo-sign-in) · [Is it fully functional?](#is-it-fully-functional) ·
-[Run it locally](#run-it-locally) · [Architecture](#architecture) · [Hosting on Railway](#hosting-on-railway) ·
-[Quality gates](#quality-gates) · [Demo script](#demo-script-510-minutes)
+### The live app
 
-## Stack
+Open <https://web-production-f3e069.up.railway.app/> and sign in with any account below. The hosted copy holds only fictional demo data.
 
-Ruby 3.3 · Rails 8.1 · PostgreSQL · Inertia.js 3 · React 19 · TypeScript · Vite 8 · Tailwind CSS 4 ·
-Active Storage · Solid Queue · Minitest. Fonts are self-hosted (Instrument Sans and Serif, IBM Plex Mono).
-
-## Try it: demo sign-in
+### Demo accounts
 
 After `bin/rails db:setup` (or `bin/rails db:seed`) these four company admins exist. **They all share one password.**
 
@@ -40,20 +51,272 @@ After `bin/rails db:setup` (or `bin/rails db:seed`) these four company admins ex
 |---|---|---|
 | `maya.reyes@northwind.example` | Northwind Logistics | 64 assessments (the design's dataset, with legacy-messy statuses) |
 | `daniel.osei@northwind.example` | Northwind Logistics | the same company as Maya, a second admin |
-| `jonas.weber@harborpine.example` | Harbor & Pine Clinics | 24 assessments |
-| `aisha.bello@summitphysio.example` | Summit Physio Group | 40 assessments (with legacy-messy statuses) |
+| `jonas.weber@harborpine.example` | Harbor & Pine Clinics | 24 assessments, clean |
+| `aisha.bello@summitphysio.example` | Summit Physio Group | 40 assessments (messy again) |
 
-**Password: `ergocheck-demo-2026`** (change it before seeding with `DEMO_ADMIN_PASSWORD=...`; on any hosted copy, always do). Seeding again always re-applies the configured password to these four accounts, so changing the variable and re-running `bin/rails db:seed` (or redeploying a hosted copy with `ALLOW_DEMO_SEED=true`) changes it.
+**Password: `ergocheck-demo-2026`.** Set `DEMO_ADMIN_PASSWORD=...` before seeding to change it. For a real deployment always do; the live demo deliberately keeps these fictional accounts so reviewers can sign in. Seeding again re-applies the configured password to these four accounts.
 
-**Signing in has three parts:** email, password, then the **verification**. It is a real self-hosted CAPTCHA: type the five digits in the
-image. If you cannot read it, click *Can't see the image? Use a text question instead* and answer the sum (for example "What is 36 minus 25?").
-A wrong code is rejected even with the right password, and every challenge works once.
+**Signing in has three parts:** email, password, then the **verification**: a real self-hosted CAPTCHA, five digits in an image. If you cannot read it, click *Can't see the image? Use a text question instead* and answer the sum (for example "What is 36 minus 25?"). A wrong code is rejected even with the right password, and every challenge works once.
 
-**Who sees what:** Maya and Daniel are two admins of **Northwind** and see the same 64 assessments (a deliberately messy, legacy-spelled data set, so the legacy note shows); Jonas is the only admin of **Harbor & Pine** and sees 24 clean ones (no note); Aisha sees Summit Physio's 40 (messy again). Exports are shared inside a company, so Daniel sees an export Maya requested, with her name on it.
+### A two-minute tour
 
-**What to try:** sign in as Maya and as Jonas in turn and see two different datasets (the page says *Showing your company only*; the
-company comes from your session, never from a parameter). Then use the dashboard, open a row, change its status, press **New assessment**, and export a CSV.
-The [demo script](#demo-script-510-minutes) below is a ready-made tour.
+1. **Two companies, two datasets.** Sign in as Maya (Northwind): the page says *Showing your company only* and shows 64 assessments with a *Data tidiness* note ("42 of 64 use a standard status"). Sign out and sign in as Jonas (Harbor & Pine): 24 clean assessments, no note. The company comes from your session, never from a parameter.
+2. **The dashboard.** Search "priya", click **Completed**, open a row (the URL carries `?selected=`), change its status and watch the chips and score react. A pending row says *Not scored yet*.
+3. **An export, and its link.** As Maya press **Export CSV**, request it, then open **Exports**. Under the row you see the export's **own link** with a **Copy** button and **"Expires in 23h 5Xm …"** counting down.
+4. **The link belongs to the company.** Click **Copy**, sign out, sign in as **Jonas**, and paste the link into the address bar: **a 404**. Daniel (same company as Maya) can use it; Jonas (another company) cannot, even holding the exact link.
+5. **The plan.** Open **Release plan** (type `comp`, `n/a`, `xyz` into the tester) and **Safeguards** (the log line before and after filtering).
+
+## Architecture
+
+### The big picture
+
+One Rails app, one deployable. The browser talks to Rails through Inertia (no separate API); everything else lives in the one PostgreSQL database.
+
+```mermaid
+flowchart LR
+  subgraph Browser["Browser"]
+    UI["React 19 + TypeScript pages<br/>rendered by Inertia<br/>(no separate API)"]
+  end
+
+  subgraph Railway["Railway: one app service + one Postgres service"]
+    subgraph Rails["Rails 8.1 app: Puma, one deployable"]
+      CTRL["Controllers<br/>session gives Current.company<br/>(the only source of the tenant)"]
+      DOM["Domain objects<br/>Status, ScoreCalculator,<br/>AssessmentDashboard, AssessmentSearch,<br/>export Builder"]
+      JOB["Solid Queue worker<br/>runs inside Puma"]
+      AST["Assistant (optional)<br/>2 validated tools"]
+    end
+    PG[("PostgreSQL<br/>app tables, jobs, cache")]
+    FILES[("Export files<br/>Volume or S3")]
+  end
+
+  LLM["Anthropic or OpenAI<br/>(optional)"]
+
+  UI -->|"HTTPS, Inertia visits"| CTRL
+  CTRL --> DOM
+  DOM --> PG
+  CTRL -->|"enqueue: export id only"| JOB
+  JOB --> PG
+  JOB -->|"CSV, batches of 1,000"| FILES
+  CTRL -.->|"one-minute signed link"| FILES
+  CTRL --> AST
+  AST -.->|"question + allowed values only"| LLM
+
+  classDef store fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef opt fill:#eceeed,stroke:#8c9690,color:#39443f,stroke-dasharray: 4 3
+  class PG,FILES store
+  class AST,LLM opt
+```
+
+### One request, end to end
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Admin as Admin (Maya)
+  participant UI as React page
+  participant C as AssessmentsController
+  participant Au as Authentication
+  participant D as AssessmentDashboard
+  participant DB as PostgreSQL
+
+  Admin->>UI: open /assessments?status=completed&q=priya
+  UI->>C: Inertia visit (session cookie)
+  C->>Au: resolve the admin from the server-side session
+  Au-->>C: Current.admin, then Current.company
+  Note over C,Au: no company id is read from the request
+  C->>D: filters only
+  D->>DB: query 1, grouped COUNT by status (chips, bar, legacy note)
+  D->>DB: query 2, one page of 10 rows, employee joined, only the shown columns
+  D-->>C: rows, counts, legacy summary
+  C-->>UI: props (a typed contract in TypeScript)
+  UI-->>Admin: rendered page
+```
+
+### The one rule that matters: the tenant comes from the session
+
+`Current.company` is derived from the signed-in admin, and every query goes through `Current.company.<association>`. A `company_id` parameter is not read anywhere, so there is nothing for a client to forge. Another company's record is a **404, not a 403**, so the response does not even confirm that it exists.
+
+```mermaid
+flowchart TD
+  L["Someone opens /exports/42/download"] --> S{"Signed in?"}
+  S -->|no| SI["Redirected to sign-in"]
+  S -->|yes| CO["Current.company, taken from the session"]
+  CO --> Q["Current.company.assessment_exports.find(42)"]
+  Q -->|"the export belongs to this company"| OK{"Ready and not expired?"}
+  Q -->|"another company's export, or no such id"| N404["404 page<br/>identical for both cases"]
+  OK -->|yes| SIG["Redirect to a one-minute signed file URL<br/>download counted"]
+  OK -->|expired| EX["Back to Exports: 'That download has expired'"]
+  OK -->|not ready| NR["Back to Exports: 'That export isn't ready yet'"]
+
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  classDef good fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  class N404 deny
+  class SIG good
+```
+
+### An export, from request to expiry
+
+A background job rather than streaming: a large export can outlast a web request, and a restart should not lose it ([`SOLUTION.md` §4.1](SOLUTION.md#41-async-not-streaming--and-why)).
+
+```mermaid
+stateDiagram-v2
+  [*] --> queued: admin requests an export (two filters only)
+  queued --> processing: the job claims the row atomically
+  processing --> ready: file attached, link valid for 24 hours
+  processing --> failed: a generic error code is stored
+  processing --> stalled: no heartbeat for 10 minutes
+  stalled --> queued: Retry
+  failed --> queued: Retry
+  ready --> expired: the 24 hour countdown reaches zero
+  expired --> queued: Retry
+  expired --> [*]: a daily job purges the file
+```
+
+Every row on the Exports page carries its own link and, once the file is ready, a countdown. The server sends the time left as a **duration** (`expires_in`), so a wrong clock on the admin's computer cannot shift it, and the browser counts on its own timer.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Maya as Maya (Northwind)
+  actor Jonas as Jonas (Harbor and Pine)
+  participant UI as Exports page
+  participant S as Server
+  participant F as File storage
+
+  Maya->>UI: opens the Exports page
+  UI->>S: GET exports (props)
+  S-->>UI: every row carries link_path, and expires_in in seconds once ready
+  Note over UI: the countdown ticks on the browser's own timer,<br/>so a wrong clock cannot shift it
+  Maya->>S: opens the link (the owning company)
+  S->>F: ask for a one-minute signed URL
+  S-->>Maya: redirect to the file, download counted
+  Jonas->>S: opens the same link (another company)
+  S-->>Jonas: 404, the page an unknown id gets, nothing counted
+  UI->>S: at zero, reload the list
+  S-->>UI: the row is now Expired, with Retry
+```
+
+**What is in the file:** `assessment_id, employee_ref, department, status, score, created_at`.
+**What is never in it:** names, e-mail addresses, free-text answers, raw responses. Employees appear as a one-way HMAC reference such as `emp_a41f9c02d7e1`.
+The export reads those six columns through a dedicated `SELECT`, so sensitive columns are never loaded: redaction by construction, not by filtering.
+
+### Data model
+
+```mermaid
+erDiagram
+  COMPANIES ||--o{ ADMINS : "has"
+  COMPANIES ||--o{ EMPLOYEES : "has"
+  COMPANIES ||--o{ ASSESSMENTS : "owns"
+  COMPANIES ||--o{ ASSESSMENT_EXPORTS : "owns"
+  EMPLOYEES ||--o{ ASSESSMENTS : "is assessed in"
+  ADMINS ||--o{ ASSESSMENT_EXPORTS : "requests"
+  ADMINS ||--o{ ADMIN_SESSIONS : "signs in with"
+
+  COMPANIES {
+    bigint id PK
+    string name
+  }
+  ADMINS {
+    bigint id PK
+    bigint company_id FK
+    string name
+    string email
+    string password_digest
+  }
+  ADMIN_SESSIONS {
+    bigint admin_id FK
+    string token_digest
+    datetime last_seen_at
+  }
+  EMPLOYEES {
+    bigint id PK
+    bigint company_id FK
+    string name
+    string email
+    string department
+  }
+  ASSESSMENTS {
+    bigint id PK
+    bigint company_id FK
+    bigint employee_id FK
+    string status "free text for years"
+    jsonb responses_json "answers and section scores"
+    datetime created_at
+  }
+  ASSESSMENT_EXPORTS {
+    bigint id PK
+    bigint company_id FK
+    bigint admin_id FK
+    date from_date
+    date to_date
+    string status_filter
+    string state "queued, processing, ready, failed"
+    int progress
+    datetime expires_at "24 hours after ready"
+    int download_count "audit trail"
+    datetime last_downloaded_at
+  }
+```
+
+`assessments.status` is a free string with years of inconsistent values: the legacy rough edge the brief describes. Reads fold old spellings through `Status.classify`; writes go through `Status.normalize`.
+Indexes: `(company_id, created_at DESC, id DESC)` orders the page, `(company_id, status, created_at DESC)` answers the status counts. Also in the database: a one-use `captcha_challenges` table, and Solid Queue and Solid Cache tables.
+
+### Statuses: one definition, used everywhere
+
+```mermaid
+flowchart LR
+  RAW["A status value<br/>stored years ago, or submitted now"] --> NORM{"Status.normalize"}
+  NORM -->|"complete, comp, done"| C["completed"]
+  NORM -->|"one of the five already"| SAME["unchanged"]
+  NORM -->|"nil, empty, n/a, null"| P["pending"]
+  NORM -->|"anything else"| U{"Where is this?"}
+  U -->|"on save, live today"| REJ["Rejected by validation<br/>only the five values can be stored"]
+  U -->|"in the history backfill, planned only"| NF["needs_follow_up<br/>original kept in status_legacy"]
+
+  classDef good fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef warn fill:#fbefd3,stroke:#c98a12,color:#7a4e00
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  class C,SAME,P good
+  class NF warn
+  class REJ deny
+```
+
+The historical clean-up is an eight-step release plan; green steps are safe while the app is live, amber steps are for a low-traffic window. The full plan, backup and rollback ladder are in [`SOLUTION.md` §6](SOLUTION.md#6-task-3--normalizing-statuses-with-a-safe-release-plan).
+
+```mermaid
+flowchart LR
+  s1["1. Backup<br/>and prove it restores"] --> s2["2. Deploy the<br/>write-path normalizer"]
+  s2 --> s3["3. Add status_legacy<br/>nullable, metadata only"]
+  s3 --> s4["4. CHECK constraint<br/>NOT VALID"]
+  s4 --> s5["5. Backfill in batches<br/>of 5,000, resumable"]
+  s5 --> s6["6. VALIDATE the<br/>constraint"]
+  s6 --> s7["7. Dashboard indexes<br/>CONCURRENTLY"]
+  s7 --> s8["8. Drop status_legacy<br/>after 14 stable days"]
+
+  classDef live fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef window fill:#fbefd3,stroke:#c98a12,color:#7a4e00
+  class s1,s2,s3,s5,s6,s7 live
+  class s4,s8 window
+```
+
+### Why it is shaped this way
+
+- **Inertia, not a separate SPA and API.** One repository, one deploy, one set of auth and CSRF rules. Controllers return page props; React renders them, and an old page and a new page can live in the same app, so a legacy UI can be modernised page by page. TypeScript sits where it adds value: the contract between server and page.
+- **Plain Ruby objects for the domain.** `Status`, `ScoreCalculator`, `AssessmentDashboard`, `AssessmentRow`, `NewAssessment` and the export builder are small, individually tested classes. Controllers only translate HTTP to and from them.
+- **Background export, not streaming.** A queued row plus a job gives progress, retry and a stored file, and never holds a web thread.
+- **Jobs live in the same Postgres.** Solid Queue and Solid Cache use tables in the one database, so a deployment needs only Postgres (no Redis).
+- **Restraint.** No rewrite, no new framework, no new infrastructure. Anything beyond the brief is flagged as such.
+
+### Cookies
+
+| Cookie | Purpose | Consent |
+|---|---|---|
+| `_ergocheck_session` | keeps you signed in (encrypted, HttpOnly, SameSite=Lax, Secure in production) | strictly necessary |
+| `XSRF-TOKEN` | CSRF protection for in-page requests | strictly necessary |
+| `ergocheck_consent` | remembers your choice (signed, 12 months) | strictly necessary |
+| `ergocheck_prefs` | remembers the dashboard status filter and date preset (signed, 90 days) | **only with your opt-in** |
+
+The banner offers *Accept all*, *Essential only* or *Customize*; **Cookie settings** in the account menu (the round initials button, top right) reopens it. Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" ticks on the Release plan page use `localStorage` and are likewise remembered only if you opted in.
 
 ## Is it fully functional?
 
@@ -67,20 +330,15 @@ The [demo script](#demo-script-510-minutes) below is a ready-made tour.
 | **New assessment** | Pick one of your employees or add one, choose a status, optionally enter the four section scores. Saved to your company only |
 | CSV export | Live match count, background build with real progress, ready / failed / expired states, retry, one-minute signed download. Six columns, no personal data |
 | Exports page | History of the company's exports and their state, who requested each one, how often it was downloaded, and on every row the export's own link (Copy) with a live countdown to when it expires. Another company opening that link gets a 404 |
-| Search | Find assessments by part of an employee's name, a department or an `A-` code; several words at once; `/` or Cmd/Ctrl+K to focus it. Counts, pager and the legacy note follow the search; it is never logged, never remembered and never part of an export |
-| Ask in plain English | Optional (see "The assistant" below): a sentence becomes filters, or an export you review and confirm. Hidden unless configured |
+| Search | By part of an employee's name, a department or an `A-` code; several words at once; `/` or Cmd/Ctrl+K to focus it. Counts, pager and the legacy note follow the search; it is never logged, never remembered and never part of an export |
+| Ask in plain English | Optional (see [The assistant](#the-assistant-optional)): a sentence becomes filters, or an export you review and confirm. Hidden unless configured |
 | Legacy-data note | Under the filters: "42 of 64 use a standard status" with a progress bar, which older spellings were found and how they are shown. Hidden when the data is clean |
 | Cookies | Consent banner, *Cookie settings*, an optional cookie only after opt-in |
 | Release plan and Safeguards | Internal pages: the status mapping with a live tester, the eight release steps, and the log-filtering proof |
 
-**Deliberately not included** (they are outside the brief, and the brief asks for restraint): self-service sign-up, password reset and e-mail (there is no
-mailer), admin management, editing or deleting employees and assessments (an assessment is retired by setting it to *Archived*), and running the
-historical status backfill (the brief says *plan only*). Admin accounts are provisioned (the seeds do it).
+**Deliberately not included** (outside the brief, which asks for restraint): self-service sign-up, password reset and e-mail (there is no mailer), admin management, editing or deleting employees and assessments (an assessment is retired by setting it to *Archived*), and running the historical status backfill (the brief says *plan only*). Admin accounts are provisioned (the seeds do it).
 
-**Why not Devise?** Sign-in is a small custom layer on Rails' own tools: `has_secure_password` (bcrypt) plus server-side `admin_sessions` rows.
-The app needs no sign-up, confirmation, reset or lockout flows, so Devise's modules would be unused surface, and the CAPTCHA, the revocable
-sessions and the per-account throttle all had to be custom anyway. The cost is real: if the product later needs password reset or 2FA, adopting Devise
-(or the Rails authentication generator's reset flow) is the sensible next step. Details in [`SOLUTION.md` §7](SOLUTION.md#7-sign-in-captcha-and-cookies).
+**Why not Devise?** Sign-in is a small custom layer on Rails' own tools: `has_secure_password` (bcrypt) plus server-side `admin_sessions` rows. The app needs no sign-up, confirmation, reset or lockout flows, so Devise's modules would be unused surface, and the CAPTCHA, the revocable sessions and the per-account throttle all had to be custom anyway. The cost is real: if the product later needs password reset or 2FA, adopting Devise (or the Rails authentication generator's reset flow) is the sensible next step. Details in [`SOLUTION.md` §7](SOLUTION.md#7-sign-in-captcha-and-cookies).
 
 ## Run it locally
 
@@ -93,8 +351,7 @@ bin/rails db:setup      # creates the databases, loads the schema, seeds the dem
 bin/dev                 # Rails on :3000 plus the Vite dev server on :3036
 ```
 
-Open <http://localhost:3000> and sign in with an account from [the table above](#try-it-demo-sign-in).
-`db:setup` prints the accounts again; so does `bin/rails db:seed` at any time (it never duplicates anything).
+Open <http://localhost:3000> and sign in with an account from [the table above](#demo-accounts). `db:setup` prints the accounts again; so does `bin/rails db:seed` at any time (it never duplicates anything).
 
 **Port 3000 already used?** Pick another one; Rails follows `PORT`:
 
@@ -118,8 +375,7 @@ In development, background jobs run in-process, so exports finish without a sepa
 
 ### The assistant (optional)
 
-*Ask in plain English* turns a sentence such as "completed in Warehouse, last 30 days" or "export September" into the dashboard's own filters, or into an
-export you still review and confirm. It is **off unless you configure it**, so nothing changes for anyone who does not want it.
+*Ask in plain English* turns a sentence such as "completed in Warehouse, last 30 days" or "export September" into the dashboard's own filters, or into an export you still review and confirm. It is **off unless you configure it**, so nothing changes for anyone who does not want it.
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...   bin/dev     # or OPENAI_API_KEY=sk-...   (ASSISTANT_PROVIDER and ASSISTANT_MODEL are optional)
@@ -128,33 +384,47 @@ ASSISTANT_PROVIDER=rules       bin/dev     # no key: a few plain rules, no AI, n
 
 To run locally with the same variables you set on the hosting platform, put them in a git-ignored `.env` file at the project root (`.env.example` lists them all): `bin/dev` loads it, so the assistant behaves the same locally as when deployed. Restart `bin/dev` after changing it. Never commit a key.
 
-It is deliberately narrow, because the data is health data: the model is sent only your question, today's date, the allowed values and your department
-names (never an employee name, e-mail, answer, score or assessment); it can only set filters or propose an export, and everything it returns is validated;
-it cannot read data, write data or create an export; the question is filtered from the logs. The provider calls are tested against a stand-in for the
-network; the **Anthropic** call was also tried by hand against the live API (two questions, see `SOLUTION.md` §14) and the **OpenAI** call has **not** been run live; the offline mode was exercised end to end. Details in `SOLUTION.md` §14.
+```mermaid
+flowchart LR
+  Q["Question typed by the admin"] --> B["The server builds the prompt:<br/>the question, today's date,<br/>the allowed values, department names"]
+  B --> M["Model (Anthropic or OpenAI),<br/>or the offline rules"]
+  M --> V["The server validates the tool calls<br/>set_filters or prepare_export"]
+  V --> P["A proposal, shown to the admin:<br/>a filter chip with Undo,<br/>or a prefilled export dialog"]
+  P --> OK{"Admin confirms?"}
+  OK -->|yes| A["A normal request,<br/>with the same checks as by hand"]
+  OK -->|no| X["Nothing happens"]
+  NEVER["Never sent to the model:<br/>names, e-mails, answers, scores, rows"]
+
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  class NEVER deny
+```
+
+It is deliberately narrow, because the data is health data: it cannot read data, write data or create an export, and everything it returns is validated; the question is filtered from the logs. The provider calls are tested against a stand-in for the network; the **Anthropic** call was also tried by hand against the live API (two questions, see `SOLUTION.md` §14) and the **OpenAI** call has **not** been run live; the offline mode was exercised end to end.
 
 ### Quality gates
 
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 355 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 355 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, export links, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
-npm run check            # TypeScript
+npm run check            # TypeScript (strict)
 npm audit                # JavaScript dependency advisories
 bin/ci                   # all of the above in one go
 ```
 
 ### Measure the dashboard yourself
 
+![Dashboard load time, before and after: the replay of the inherited page grows from 1.4 s to 94.5 s as a company grows from 5,000 to 300,000 assessments; the shipped page stays between 3 and 23 ms.](benchmarks/dashboard-chart.svg)
+
 ```bash
+SIZES=5000 bin/rails perf:report     # seed and benchmark one size in about 3 seconds
 bin/rails perf:seed ROWS=100000      # one big tenant plus other tenants (3x as many rows)
 bin/rails perf:benchmark             # legacy-style page vs the current one, with and without the indexes
 bin/rails perf:explain               # EXPLAIN ANALYZE of the SQL the page really runs
 bin/rails perf:clean                 # remove the benchmark data
-SIZES=5000 bin/rails perf:report     # seed and benchmark one size in about 3 seconds
 ```
 
 Large sizes are slow because the *old* page is slow: replaying it makes one query per row, which is minutes at 400,000 rows. To measure only the current page at a big size, leave that out:
@@ -163,7 +433,7 @@ Large sizes are slow because the *old* page is slow: replaying it makes one quer
 SIZES=700000 LEGACY=skip INDEXES=shipped bin/rails perf:report   # about a minute; progress prints to stderr
 ```
 
-My own run is committed in [`benchmarks/`](benchmarks/dashboard-2026-10-10.txt) and summarised in `SOLUTION.md`.
+My own run is committed in [`benchmarks/`](benchmarks/dashboard-2026-10-10.txt) and summarised in `SOLUTION.md` §5.3.
 
 ### The status backfill (plan only)
 
@@ -173,89 +443,9 @@ bin/rails status:backfill:run CONFIRM=yes        # guarded; needs the status_leg
 bin/rails status:backfill:rollback CONFIRM=yes   # restores the original values
 ```
 
-The write tasks refuse to run without `CONFIRM=yes`, without the prerequisite column, and in production without
-`BACKUP_TAKEN=yes`. This repository never runs them against real data.
+The write tasks refuse to run without `CONFIRM=yes`, without the prerequisite column, and in production without `BACKUP_TAKEN=yes`. This repository never runs them against real data.
 
-## Architecture
-
-### The big picture
-
-```
- Browser  ── React 19 + TypeScript pages, rendered by Inertia (no separate API: Rails hands each page its props)
-    │
-    ▼
- Rails 8.1 (one app, one deployable)
-    │   ApplicationController ── Authentication ── Current.admin ── Current.company   ← the ONLY source of the tenant
-    │
-    ├─ SessionsController, CaptchasController, CookieConsentsController     sign-in, CAPTCHA, consent
-    ├─ AssessmentsController   index (dashboard) · create (new assessment) · update (status)
-    │       ├─ AssessmentDashboard ── 1 grouped COUNT + 1 page of 10 rows ── AssessmentRow ── ScoreCalculator
-    │       └─ NewAssessment · Assessment ── Status.normalize on save, unknown values rejected
-    ├─ ExportsController ── AssessmentExport row ──enqueue──▶ AssessmentExportJob ── AssessmentExports::Builder
-    │                                                              │ batches of 1,000, progress saved, time budget
-    │                                                              ▼
-    │                                                    CSV in Active Storage ── signed, one-minute download links
-    └─ ReleasePlansController, SafeguardsController   internal ops pages (hidden in production unless SHOW_OPS_PAGES)
-    │
-    ▼
- PostgreSQL  ── one database: app tables + Solid Queue (jobs) + Solid Cache
-```
-
-### Why it is shaped this way
-
-- **Inertia, not a separate SPA and API.** One repository, one deploy, one set of auth and CSRF rules. Controllers return page props; React renders them. TypeScript stays small and sits where it adds value (the dashboard, the dialogs, the export UI).
-- **The tenant comes from the session, never from the request.** `Current.company` is derived from the signed-in admin, and every query goes through `Current.company.<association>`. A
-  `company_id` parameter is simply not read anywhere. Another company's record is a 404, not a 403, so it does not even confirm that it exists.
-- **Plain Ruby objects for the domain.** `Status`, `ScoreCalculator`, `AssessmentDashboard`, `AssessmentRow`, `NewAssessment` and the export builder are small, individually tested classes. Controllers only translate HTTP to and from them.
-- **Background export, not streaming.** A large export can outlast a web request, and a dyno restart should not lose it. A queued row plus a job gives progress, retry and a stored file; the reasoning is in [`SOLUTION.md` §4.1](SOLUTION.md#41-async-not-streaming--and-why).
-- **Redaction by construction.** The export reads six columns through a dedicated select. Names, e-mails and free text are never loaded, so they cannot leak by a missed filter.
-- **Jobs live in the same Postgres.** Solid Queue and Solid Cache use tables in the one database, so a deployment needs only Postgres (no Redis).
-
-### Data model
-
-```
-companies 1───* admins            (name, email, password_digest)   ── admin_sessions (server-side sessions)
-          1───* employees         (name, email, department)
-          1───* assessments ◀──── employee_id        (status, responses_json, created_at)
-          1───* assessment_exports (filters, state, progress, file)
-captcha_challenges                (single-use digest + expiry; verifying deletes the row)
-```
-
-`assessments.status` is a free string with years of inconsistent values; that is the legacy rough edge the brief describes. Reads normalize through `Status.classify`, writes through `Status.normalize`.
-Indexes: `(company_id, created_at DESC, id DESC)` orders the page, `(company_id, status, created_at DESC)` answers the status counts.
-
-### The steps an export goes through
-
-1. **Request.** The admin picks a date range and status. A live preview shows how many rows match, counted by the
-   same code that builds the file. The company is *never* read from the request.
-2. **Queued.** A row is stored with only the two filters, and a job is enqueued with just its id. A company can have at
-   most three exports in flight.
-3. **Building.** The job claims the row atomically (so it can never run twice), reads the company's assessments in
-   batches of 1,000, writes six columns to a temp file, and saves real progress after each batch. A time budget
-   (`EXPORT_MAX_SECONDS`, default 300) stops a runaway export.
-4. **Ready.** The file is attached to Active Storage; the link is valid for 24 hours. Downloading re-checks the
-   tenant, then redirects to a **one-minute signed storage URL** (the file never streams through Rails).
-5. **Failed or expired.** Failures store a generic code, never the exception message (which can contain row data).
-   An expired export shows "Expired" and can be retried; a daily job deletes the stored files.
-
-**What is in the file:** `assessment_id, employee_ref, department, status, score, created_at`.
-**What is never in it:** names, e-mail addresses, free-text answers, raw responses. Employees appear as a one-way
-HMAC reference such as `emp_a41f9c02d7e1`.
-
-### Cookies
-
-| Cookie | Purpose | Consent |
-|---|---|---|
-| `_ergocheck_session` | keeps you signed in (encrypted, HttpOnly, SameSite=Lax, Secure in production) | strictly necessary |
-| `XSRF-TOKEN` | CSRF protection for in-page requests | strictly necessary |
-| `ergocheck_consent` | remembers your choice (signed, 12 months) | strictly necessary |
-| `ergocheck_prefs` | remembers the dashboard status filter and date preset (signed, 90 days) | **only with your opt-in** |
-
-The banner offers *Accept all*, *Essential only* or *Customize*; **Cookie settings** in the account menu (the round initials button, top right) reopens it.
-Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" ticks on the Release plan page use
-`localStorage` and are likewise remembered only if you opted in.
-
-### Where things live
+## Where things live
 
 | Area | Files |
 |---|---|
@@ -268,43 +458,45 @@ Withdrawing consent deletes `ergocheck_prefs` immediately. The "release steps" t
 | Assistant | `app/models/assistant.rb`, `app/models/assistant/` (agent, tools, clients), `app/controllers/assistants_controller.rb`, `AskAssistant.tsx` |
 | Design system and layout | `app/javascript/entrypoints/application.css` (tokens), `layouts/`, `components/ui.tsx`, `components/Dialog.tsx` |
 | New assessment | `app/models/new_assessment.rb`, `AssessmentsController#create`, `app/javascript/components/assessments/NewAssessmentDialog.tsx` |
-| Export | `app/models/assessment_export.rb`, `app/models/assessment_exports/`, `app/jobs/`, `app/controllers/exports_controller.rb`, `app/javascript/components/exports/` |
+| Export | `app/models/assessment_export.rb`, `app/models/assessment_exports/`, `app/jobs/`, `app/controllers/exports_controller.rb`, `app/javascript/components/exports/` (including `ExportLink.tsx` and `Countdown.tsx`) |
+| The 404 page | `public/404.html`, rendered by `ApplicationController` for any missing or foreign record |
 | Performance | `db/migrate/*_add_assessments_dashboard_indexes.rb`, `lib/tasks/perf.rake`, `benchmarks/` |
 | Logging | `config/initializers/filter_parameter_logging.rb`, `test/integration/log_hygiene_test.rb` |
 | Deployment | `Dockerfile`, `config/puma.rb`, `Procfile`, `app.json`, `bin/docker-entrypoint` |
 
 ## Hosting on Railway
 
-The app is set up to be hosted on [Railway](https://railway.com) as **one app service plus one PostgreSQL service**. Everything you need is on this page.
+The app is set up to be hosted on [Railway](https://railway.com) as **one app service plus one PostgreSQL service**; the live app above runs this way. Everything you need is on this page.
 
-> **What is and is not verified.** A first live deploy found three real problems, each now fixed and covered by a test (a commented-out `production:` block in
-> `config/database.yml`, a web process that started against an empty database, and a seed gate that silently skipped the demo accounts). The same commands Railway
-> runs were also exercised locally in production mode: release build, `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and
-> downloaded, the health check answering on IPv4 and IPv6. **Not verified:** the Docker build itself (no Docker where this was written), and
-> export storage on a Railway volume or in S3 (S3 is exercised with a stubbed client only, see "Where export files are stored").
+> **What is and is not verified.** A first live deploy found three real problems, each now fixed and covered by a test (a commented-out `production:` block in `config/database.yml`, a web process that started against an empty database, and a seed gate that silently skipped the demo accounts). The same commands Railway runs were also exercised locally in production mode: release build, `db:prepare db:seed`, `bin/rails server -b ::`, the job worker inside Puma, an export built and downloaded, the health check answering on IPv4 and IPv6. **Not verified:** the Docker build itself (no Docker where this was written), and export storage on a Railway volume or in S3 (S3 is exercised with a stubbed client only, see "Where export files are stored").
 
 ### How it is hosted
 
-```
- GitHub repository ──push──▶ Railway project
-                              │
-                              ├─ App service  (built from the Dockerfile; configured on its Settings page)
-                              │     1. build        Dockerfile: Ruby gems, Node only to compile the Vite/React bundle, assets precompiled
-                              │     2. pre-deploy   bin/rails db:prepare db:seed     (creates/migrates tables; demo data only if allowed)
-                              │     3. start        bin/rails server -b ::           (Puma; the job worker runs inside it)
-                              │     4. health check GET /up must answer 200 before the new version takes traffic
-                              │     └─ public URL   Settings → Networking → Generate Domain (HTTPS, handled by Railway)
-                              │
-                              ├─ Postgres service  ── DATABASE_URL (private network)   one database: app tables + job queue + cache
-                              │
-                              └─ Export files      Volume mounted at /rails/storage   (or Amazon S3)
+```mermaid
+flowchart TD
+  GH["GitHub repository<br/>push to main"] --> RW["Railway project"]
+  RW --> APP["App service, built from the Dockerfile"]
+  RW --> PGS["Postgres service<br/>DATABASE_URL, private network"]
+  APP --> B1["1. Build<br/>gems, Vite bundle, assets"]
+  B1 --> B2["2. Pre-deploy<br/>bin/rails db:prepare db:seed"]
+  B2 --> B3["3. Start<br/>bin/rails server, job worker inside Puma"]
+  B3 --> B4{"4. GET /up answers 200?"}
+  B4 -->|yes| LIVE["Traffic switches to the new version<br/>HTTPS handled by Railway"]
+  B4 -->|no| KEEP["The previous version keeps serving"]
+  APP --- VOL[("Export files<br/>Volume at /rails/storage, or S3")]
+  PGS --- DBX[("One database:<br/>app tables, job queue, cache")]
+
+  classDef good fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  class LIVE good
+  class KEEP deny
 ```
 
 - **One service runs everything.** Puma serves the app and, with `SOLID_QUEUE_IN_PUMA=1`, also runs the job worker that builds CSV exports. Jobs, cache and app data share the one Postgres, so there is no Redis to host.
 - **The database is prepared twice, on purpose.** Railway's pre-deploy command runs `db:prepare db:seed` before the new version starts, and `config/puma.rb` runs the same thing when the web process boots in production, because a custom start command can bypass the pre-deploy step. It is idempotent and takes about a second when there is nothing to do; `SKIP_DB_PREPARE=1` turns the boot-time run off.
 - **The health check protects each deploy.** Railway calls `/up` (from the host `healthcheck.railway.app`, which the app does not filter) and only switches traffic over once it answers with a success status.
 - **HTTPS is terminated by Railway.** The app trusts that (`assume_ssl`), forces secure cookies, and sends a strict Content-Security-Policy.
-- **Secrets stay out of the repository.** Everything below is set as Railway variables, never committed. The demo password is the one value you must change before the URL is public.
+- **Secrets stay out of the repository.** Everything below is set as Railway variables, never committed.
 - **There is no `railway.json`.** Railway's Settings page says "Config as Code is deprecated … Starting 2026-08-28, services that have never used Config as Code cannot opt in", so for a new service such a file is not read. The values are set on the service's Settings page instead (next table).
 
 ### Service settings
@@ -341,7 +533,7 @@ RAILWAY_RUN_UID=0
 | `SHOW_OPS_PAGES` | optional | Shows the internal *Release plan* and *Safeguards* pages (404 in production otherwise). |
 | `RAILWAY_RUN_UID` | with a Volume | The image runs as a non-root user, which cannot write to a freshly mounted volume; Railway's documented fix is to run as root. |
 | `EXPORT_MAX_SECONDS` | optional | How long an export may run before it fails with "try a narrower range" (default 300). |
-| `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | optional | Turns on the assistant (see "The assistant" above). Without one the assistant does not exist. Set it as a Railway variable, never in the repository. |
+| `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | optional | Turns on the assistant (see [The assistant](#the-assistant-optional)). Without one the assistant does not exist. Set it as a Railway variable, never in the repository. |
 | `RAILS_LOG_LEVEL` | optional | `info` by default. Never `debug` in production: it logs SQL and parameters for health data. |
 
 `RAILS_ENV=production` is already set inside the Dockerfile.
@@ -361,7 +553,7 @@ An export is a CSV written through Active Storage. A Railway container's disk is
 4. Open the app service → **Variables** and add the variables above.
 5. **Storage:** attach a Volume at `/rails/storage` (or set the S3 variables instead).
 6. **Settings:** check the table above, in particular the pre-deploy command, the Dockerfile builder and the `/up` health check.
-7. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#try-it-demo-sign-in).
+7. **Settings → Networking → Generate Domain**, open it, and sign in with a [demo account](#demo-accounts).
 
 **Changing or rolling back:** pushing to the connected branch deploys again. To go back, open the service's **Deployments** list, use the menu on an earlier deployment and choose **Rollback** (it restores the image and the variables).
 
@@ -379,18 +571,6 @@ An export is a CSV written through Active Storage. A Railway container's disk is
 | The deploy is marked failed at the health check | the Healthcheck path is not `/up`, or the app crashed at boot | read the deploy log; the first error is the cause |
 | *Release plan* and *Safeguards* give a 404 | they are hidden in production | set `SHOW_OPS_PAGES=true` |
 
-## Demo script (5–10 minutes)
+## How AI tools were used
 
-1. **Tenancy (1 min).** Sign in as Northwind (Maya): header says "Showing your company only". Sign out, sign in as Harbor & Pine (Jonas):
-   a different, smaller, clean dataset with no legacy note. Mention the session, not a parameter, decides the company.
-2. **Dashboard (2 min).** The status bar and chips with counts, presets, From/To, paging; **search** "priya" (counts, pager and highlight follow); point at the legacy note ("42 of 64 use a standard status");
-   open a row (the URL carries `?selected=`), change its status, watch the toast, the chip counts and the score react. Show a "Not scored yet" row and why.
-3. **Assistant (30 s, optional).** With `ASSISTANT_PROVIDER=rules` (or a key), ask "needs follow-up in Finance, last 30 days": the filters apply, **Undo** reverts them. Ask "export September": nothing is created until you press *Request export*.
-4. **New assessment (1 min).** Press *New assessment*, add an employee, choose *Completed*, enter four scores, create it, and see the score the dashboard computes.
-5. **Export (3 min).** Export CSV from a filtered view: locked company, live match count, six columns, "Left out".
-   Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry), who requested each export, how often it was downloaded, and each row's link with its countdown. Copy a link, sign in as an admin of the *other* company, open it: a 404.
-6. **Performance (1–2 min).** `bin/rails perf:benchmark` output, and the EXPLAIN difference between the design's index and the one shipped.
-7. **Status plan (2 min).** Release plan page: type `comp`, `n/a`, `xyz` in the tester; walk the eight steps and which are live vs window;
-   `bin/rails status:backfill:report`.
-8. **Safeguards (1 min).** The before/after log line is produced by the real filter.
-9. **Code tour.** `Current.company`, `AssessmentDashboard`, `AssessmentExports::Builder`, `Status`, `StatusBackfill`.
+I used Claude, through its coding agent Claude Code, while building this: to diagnose the N+1 query behind the slow dashboard, for the UI design, for the documentation, and, under my direction, for much of the implementation and the tests. [`SOLUTION.md` §17](SOLUTION.md#17-how-i-used-ai-tools) says where it helped, how I checked its work, and where it was wrong.

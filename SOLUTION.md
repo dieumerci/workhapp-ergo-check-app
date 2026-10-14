@@ -11,7 +11,8 @@ I followed throughout, from the brief: *operate with restraint*. Targeted, safe 
 [10 Build log](#10-build-log-the-steps-and-why-each-was-done-this-way) · [11 Verification](#11-how-this-was-verified-and-what-was-not) ·
 [12 Independent review](#12-the-independent-review-and-what-it-changed) ·
 [13 The interface and search](#13-the-interface-search-and-what-changed-on-screen) · [14 The assistant](#14-the-assistant-ask-in-plain-english) ·
-[15 Upgrading an old app](#15-upgrading-a-ten-year-old-rails-app-how-i-would-do-it) · [16 What to build next](#16-what-i-would-build-next-and-why)
+[15 Upgrading an old app](#15-upgrading-a-ten-year-old-rails-app-how-i-would-do-it) · [16 What to build next](#16-what-i-would-build-next-and-why) ·
+[17 How I used AI tools](#17-how-i-used-ai-tools)
 
 ---
 
@@ -70,7 +71,7 @@ A legacy app is not a blank page. It earns money, it holds data nobody fully und
 | Step-by-step release and rollback, backup, live vs window | §6.4–6.8, SQL in `db/release_plan/` | The Release plan page renders the same steps from `ReleasePlan` |
 | Keep the app responsive; no table stalls | Batched, short transactions, lock/statement timeouts, `CONCURRENTLY`, `NOT VALID` | `status_backfill_test`; SQL in `db/release_plan/` |
 | README with run instructions, SOLUTION.md | These files | — |
-| Video demo | Recorded separately with Loom; it is not part of this repository. The README's *Demo script* is its outline. | — |
+| Video demo | Recorded with Loom, in parts (the free plan caps each recording at five minutes), and linked in the submission e-mail; it is not part of this repository. | — |
 
 ## 3. The one rule that matters: the tenant comes from the session
 
@@ -81,6 +82,26 @@ and the mutation checks (swap `Current.company.assessment_exports.find` for `Ass
 scope from `Assessment.all`) make those tests fail, which is the proof they are not vacuous.
 
 Looking up another company's record is a **404**, not a 403: the response does not confirm the record exists. The 404 is a designed page (`public/404.html`, served identically in development and production), and the reason goes to the log with ids only, never to the response.
+
+The same rule decides what happens to an export link that is passed around: it is only an address, so the question is always asked of the signed-in company.
+
+```mermaid
+flowchart TD
+  L["Someone opens /exports/42/download"] --> S{"Signed in?"}
+  S -->|no| SI["Redirected to sign-in"]
+  S -->|yes| CO["Current.company, taken from the session"]
+  CO --> Q["Current.company.assessment_exports.find(42)"]
+  Q -->|"the export belongs to this company"| OK{"Ready and not expired?"}
+  Q -->|"another company's export, or no such id"| N404["404 page<br/>identical for both cases"]
+  OK -->|yes| SIG["Redirect to a one-minute signed file URL<br/>download counted"]
+  OK -->|expired| EX["Back to Exports: 'That download has expired'"]
+  OK -->|not ready| NR["Back to Exports: 'That export isn't ready yet'"]
+
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  classDef good fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  class N404 deny
+  class SIG good
+```
 
 ## 4. Task 1 — company-scoped CSV export
 
@@ -130,6 +151,22 @@ large company would collide. I used 12 (48 bits, negligible collisions even at 1
 - **Generic failures.** An exception's message can contain SQL and row values, so only its *class name* is logged and the export stores a code (`timeout` or `error`) that maps to fixed wording. The job takes only the export id as an argument, and argument logging is switched off.
 - **Capacity.** At most three exports in flight per company; ten requests per hour per client.
 
+The states an export moves through (*stalled* is derived on screen, not stored):
+
+```mermaid
+stateDiagram-v2
+  [*] --> queued: admin requests an export (two filters only)
+  queued --> processing: the job claims the row atomically
+  processing --> ready: file attached, link valid for 24 hours
+  processing --> failed: a generic error code is stored
+  processing --> stalled: no heartbeat for 10 minutes
+  stalled --> queued: Retry
+  failed --> queued: Retry
+  ready --> expired: the 24 hour countdown reaches zero
+  expired --> queued: Retry
+  expired --> [*]: a daily job purges the file
+```
+
 ### 4.4 Download and retention
 
 Downloading re-checks the tenant, then redirects to a **one-minute signed storage URL**, so the file never streams through
@@ -151,6 +188,30 @@ The data is health-related, and "extra care" includes being able to answer an au
 - **Counted only after authorisation.** The download action counts a use once the request is tenant-checked and the file is downloadable, with a single atomic `UPDATE … SET download_count = download_count + 1` (two simultaneous clicks are both counted) that leaves `updated_at` alone, because that column is the build heartbeat. Refused downloads (not ready, expired, another company) are not counted; tests assert it.
 - **A link of its own on every row, and a countdown.** Each export row shows its own address (`/exports/<id>/download`) with a Copy button, whatever the export's state, and, once the file is ready, a live countdown (*"Expires in 23h 41m 07s"*) to when the link stops working. The countdown starts from the server's figure (`expires_in`, a duration, so a wrong clock on the admin's computer cannot shift it) and counts on the browser's own timer; at zero the list reloads and the row shows *Expired* with Retry. The link is only ever an *address*: it carries no secret and no company, because the company still comes from the session. An admin of the owning company (Maya or her colleague Daniel) opens it and is sent to the one-minute signed file; an admin of any other company, even holding this exact link, gets a **404** (a designed page, the same one an id that never existed gets), and that refused request is not counted. Five new tests and three mutation checks pin it (two on the countdown, three on the link and the 404): drop the link from the payload, drop the company scope, or break the countdown, and tests fail.
 - **Trade-off.** It records *that* a link was used, not *who* used it: the link is authorised per request, so any admin of the company could click it. A per-download audit row (admin, time, IP) is the next step if a regulator needs it.
+
+How the link and its countdown behave, for the company that owns the export and for another one:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Maya as Maya (Northwind)
+  actor Jonas as Jonas (Harbor and Pine)
+  participant UI as Exports page
+  participant S as Server
+  participant F as File storage
+
+  Maya->>UI: opens the Exports page
+  UI->>S: GET exports (props)
+  S-->>UI: every row carries link_path, and expires_in in seconds once ready
+  Note over UI: the countdown ticks on the browser's own timer,<br/>so a wrong clock cannot shift it
+  Maya->>S: opens the link (the owning company)
+  S->>F: ask for a one-minute signed URL
+  S-->>Maya: redirect to the file, download counted
+  Jonas->>S: opens the same link (another company)
+  S-->>Jonas: 404, the page an unknown id gets, nothing counted
+  UI->>S: at zero, reload the list
+  S-->>UI: the row is now Expired, with Retry
+```
 
 ## 5. Task 2 — dashboard speed and the score
 
@@ -184,6 +245,8 @@ single run for the legacy replay. Raw output: [`benchmarks/dashboard-2026-10-10.
 | 300,000 | **94,533 ms** | **23 ms** | **300,001 → 2** | **164 M → 2.4 k** |
 
 The legacy cost grows linearly with the data; the new cost is nearly flat. For the status-filtered view at 300k rows: 11,499 ms / 39,882 queries before, 23 ms / 2 queries after.
+
+![Dashboard load time on a log scale: the replay of the inherited page grows from 1.4 s at 5,000 assessments to 94.5 s at 300,000; the shipped page stays between 3 ms and 23 ms.](benchmarks/dashboard-chart.svg)
 
 **Why those two indexes, and not the one in the design.** I looked at `EXPLAIN ANALYZE` rather than assume. For the 300k-row tenant (warm cache, best of 5):
 
@@ -264,6 +327,26 @@ save, so even an unrelated update to a legacy row (`status: "done"`) leaves it a
 Matching ignores case and surrounding whitespace (`" DONE "` → `completed`). Unknown values are never mapped to `completed`: a person reviews them.
 `bin/rails status:backfill:report` also counts blank statuses that **already carry answers**, which a human should look at before the run.
 
+One definition, two behaviours: the write path rejects what it cannot map, while the planned backfill flags it for a person.
+
+```mermaid
+flowchart LR
+  RAW["A status value<br/>stored years ago, or submitted now"] --> NORM{"Status.normalize"}
+  NORM -->|"complete, comp, done"| C["completed"]
+  NORM -->|"one of the five already"| SAME["unchanged"]
+  NORM -->|"nil, empty, n/a, null"| P["pending"]
+  NORM -->|"anything else"| U{"Where is this?"}
+  U -->|"on save, live today"| REJ["Rejected by validation<br/>only the five values can be stored"]
+  U -->|"in the history backfill, planned only"| NF["needs_follow_up<br/>original kept in status_legacy"]
+
+  classDef good fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef warn fill:#fbefd3,stroke:#c98a12,color:#7a4e00
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  class C,SAME,P good
+  class NF warn
+  class REJ deny
+```
+
 ### 6.3 The backfill (designed, tested, not executed)
 
 `StatusBackfill` guarantees:
@@ -277,7 +360,23 @@ Matching ignores case and surrounding whitespace (`" DONE "` → `completed`). U
 
 ### 6.4 Step-by-step release plan
 
-DDL lives in `db/release_plan/*.sql`, **not** in `db/migrate`, so `db:migrate` can never run part of the plan. Assumes PostgreSQL ≥ 12 and a Heroku-like platform.
+DDL lives in `db/release_plan/*.sql`, **not** in `db/migrate`, so `db:migrate` can never run part of the plan. Assumes PostgreSQL ≥ 12 and a Heroku-like platform. Green steps are safe while the app is live; amber steps are for a low-traffic window.
+
+```mermaid
+flowchart LR
+  s1["1. Backup<br/>and prove it restores"] --> s2["2. Deploy the<br/>write-path normalizer"]
+  s2 --> s3["3. Add status_legacy<br/>nullable, metadata only"]
+  s3 --> s4["4. CHECK constraint<br/>NOT VALID"]
+  s4 --> s5["5. Backfill in batches<br/>of 5,000, resumable"]
+  s5 --> s6["6. VALIDATE the<br/>constraint"]
+  s6 --> s7["7. Dashboard indexes<br/>CONCURRENTLY"]
+  s7 --> s8["8. Drop status_legacy<br/>after 14 stable days"]
+
+  classDef live fill:#dfeee9,stroke:#0e6b5c,color:#0a4f44
+  classDef window fill:#fbefd3,stroke:#c98a12,color:#7a4e00
+  class s1,s2,s3,s5,s6,s7 live
+  class s4,s8 window
+```
 
 | # | Step | Command | When | Why it is safe |
 |---|---|---|---|---|
@@ -452,6 +551,11 @@ Delivered as small, verified units, each in its own worktree and branch, committ
 | 34 | Dashboard search | `9ef3ca3` | find one person's assessment; company-scoped, bind-parameterised, never logged, never in an export (§5.7); 22 tests |
 | 35 | Interface redesign | `497f082` | a design system in tokens and every screen, dialog and state restyled, floating navigation, snow-white canvas (§13); no behaviour changed |
 | 36 | The assistant | `bd3acee` | "ask in plain English", off unless configured, narrow by design (§14); 41 tests |
+| 37 | Two bugs found by using the app | `39e97ad`, `7d4cb5d` | the Release plan page stopped scrolling after the New assessment flow: each dialog saved and restored the page's scroll setting, so two overlapping dialogs closing in the wrong order left it locked (now one lock for the whole stack); and the status tester showed the same result for different spellings, so typing looked like it did nothing (it now says which value it checked) |
+| 38 | Large benchmarks made usable | `6bd4dee` | `perf:report` at 400,000 rows ran for minutes in silence. Measuring showed seeding is fast (7 s) and the cost is replaying the old page one query per row, so `LEGACY=skip` and `INDEXES=shipped` leave that out (700,000 rows in 49 s) and progress goes to stderr |
+| 39 | The assistant tried live | `8f2381b` | the Anthropic call run once against the live API (two questions); the documents now say exactly what was and was not verified (§14) |
+| 40 | A link and a countdown on every export | `1f3929c`, `16b07ca`, `491d88e` | each export row shows its own link and a live countdown; another company opening the link gets a designed 404; one `rescue_from` for missing records; warning toasts (§4.6, §13). An earlier version answered a foreign link as "expired"; it was reverted (`946ded3`) after I clarified what I wanted |
+| 41 | Submission clean-up | this commit | README rebuilt around diagrams, diagrams added here and the AI-use section (§17); every other note moved out of the repository |
 
 **Defects found by testing, not by reading — all fixed** (the second batch came from the independent review, §12): the design's index not helping the page; a `TimeBudgetExceeded` constant that would have raised `NameError` in the job's `rescue` in production (Zeitwerk); Rails' loose boolean cast
 granting cookie consent for `"yes please"`; the preview endpoint losing its date error to `valid?`; a half-applied migration that could not be reversed; a parallel test race on a cold Vite build; npm and Ruby warnings; a dev-only redirect that also ran in
@@ -516,11 +620,28 @@ The brief asks for restraint, and the three tasks are small. The interface is wh
 
 **Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 355 tests, the production build with no warnings, and a manual pass at five widths.
 
+**Two small things the redesign touched that are worth knowing.** A refusal such as a link that has expired is shown as a *warning* toast (an amber mark, six seconds) instead of the green tick every message used to get, so it is not mistaken for a success. And a missing or foreign record shows a designed 404 page (`public/404.html`) in both development and production, instead of Rails' debug page in one and a stock page in the other.
+
 **What this does not include:** dark mode, internationalisation, and automated front-end tests (see §9 and §16).
 
 ## 14. The assistant ("Ask in plain English")
 
 A sentence such as *"completed in Warehouse, last 30 days"* or *"export September"* becomes the filters the page already has, or an export the person still reviews and confirms. It is the one place an AI model removes work here (clicks), and the rest of the application stays deterministic.
+
+```mermaid
+flowchart LR
+  Q["Question typed by the admin"] --> B["The server builds the prompt:<br/>the question, today's date,<br/>the allowed values, department names"]
+  B --> M["Model (Anthropic or OpenAI),<br/>or the offline rules"]
+  M --> V["The server validates the tool calls<br/>set_filters or prepare_export"]
+  V --> P["A proposal, shown to the admin:<br/>a filter chip with Undo,<br/>or a prefilled export dialog"]
+  P --> OK{"Admin confirms?"}
+  OK -->|yes| A["A normal request,<br/>with the same checks as by hand"]
+  OK -->|no| X["Nothing happens"]
+  NEVER["Never sent to the model:<br/>names, e-mails, answers, scores, rows"]
+
+  classDef deny fill:#fbe2db,stroke:#c5502f,color:#9a3320
+  class NEVER deny
+```
 
 **It is off unless configured.** With no key and no `ASSISTANT_PROVIDER`, there is no button and the endpoint answers 404. `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` turns it on (Anthropic wins if both are set; `ASSISTANT_PROVIDER` and `ASSISTANT_MODEL` choose). `ASSISTANT_PROVIDER=rules` is an **offline mode**: a few plain rules read a status, a period, a month, a department and the word "export", and return the same tool calls a model would, with no AI and no network (it says so on screen). It lets the feature be tried, demonstrated and tested without a key.
 
@@ -581,3 +702,34 @@ Ordered by value to a company admin, each with the reason and the smallest first
 | **Dark mode** | Expected on a modern product | tokens already centralised: a second set of values |
 | **Two-factor sign-in, SSO** | The honest next step beyond a CAPTCHA | adopt Devise or the Rails authentication generator at that point (§7) |
 | **Front-end tests** | The least-covered layer | component tests for the dialog focus handling and the search debounce |
+
+## 17. How I used AI tools
+
+I used Claude, Anthropic's AI assistant, through its coding agent Claude Code, while building this. I want to be specific about where, because this take-home is about judgment, and I would rather you know exactly how the tool was used.
+
+### 17.1 Where it helped
+
+- **Performance (§5).** Working out why the dashboard was slow. It identified the N+1 pattern (one employee query for every row, on top of loading every row with every column), helped me rebuild the behaviour the brief describes so it could be measured, and proposed the two-query page and the index experiments. The numbers come from a task anyone can rerun (`bin/rails perf:report`), and the experiments overturned the design's own index suggestion.
+- **UI design (§13).** The visual direction, the token-based design system and the redesigned screens. I made the product calls, for example a snow-white canvas after I saw the first cream version look beige on my own laptop.
+- **Documentation.** The README, this document and their diagrams were drafted with it and corrected by me.
+- **Implementation and tests.** Working to my brief and checklist, it also wrote much of the code and the test suite, in small steps that were each verified before they were merged. I tested the running app myself, reported what was wrong, and decided what to build and what to leave out.
+
+### 17.2 How I checked its work instead of trusting it
+
+- **Tests that can fail.** 355 automated tests, and for the important ones a mutation check: break the code on purpose (drop the tenant scope, remove a log filter, break the countdown) and confirm a test goes red.
+- **The real thing, not a stand-in.** Pages driven in a real browser at five widths, the real request log read for leaked values, and production mode booted against an empty database.
+- **An independent review (§12)** by a separate read-only agent, which found problems my own tests had missed.
+- **A fresh-clone gate** before merging: tests, RuboCop, Brakeman, dependency audits, TypeScript, the production build and a production-mode boot.
+- **Honest limits.** What was not verified is listed in §11 and §9, not hidden.
+
+### 17.3 Where it was wrong, and how that was caught
+
+| What went wrong | How it was caught | What changed |
+|---|---|---|
+| The CAPTCHA answer lived in the cookie-store session, so one solved challenge could be replayed 10 of 10 times | The independent review (§12) | The challenge moved to a server-side, single-use row |
+| A production-only initializer referenced a constant that was not loaded yet, so every production boot would have failed; 228 green tests missed it | The final fresh-clone gate | `after_initialize`, and a test that boots real production mode |
+| The `production:` block in `config/database.yml` was commented out | My first real deploy, from the logs | An explicit block, a readable boot error, a test that reads the file |
+| It said seeding was the slow part of large benchmarks, and wrote that in a comment | I asked why `perf:report` took so long; measuring showed seeding takes 7 s and replaying the old page is the cost | The comment corrected, and two switches added (`6bd4dee`) |
+| Overlapping dialogs left the whole page unscrollable | I hit it while using the app | One scroll lock for the whole stack of dialogs (`39e97ad`) |
+| It misread what I wanted for the export link, twice (first a 404 page, then an "expired" message for another company) | I explained what I wanted in my own words | The first attempt was reverted (`946ded3`) and the feature built as I described it |
+| The documents said the Anthropic call had never run against a live API | I supplied a key so it could be tried | It was run once, and §14 and the README now say exactly what was verified and what was not |
