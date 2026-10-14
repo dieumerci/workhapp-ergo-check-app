@@ -45,7 +45,7 @@ function useExportProgress(exports: ExportView[]) {
       const was = previous.current.get(job.id)
       if (was === 'queued' || was === 'processing') {
         if (job.state === 'ready') say('Export ready to download')
-        if (job.state === 'failed') say('Export failed. See the Exports page.')
+        if (job.state === 'failed') say('Export failed. See the Exports page.', 'warn')
       }
     }
     previous.current = new Map(exports.map((job) => [job.id, job.state]))

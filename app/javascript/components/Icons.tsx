@@ -123,6 +123,14 @@ export function CheckIcon(props: IconProps) {
   )
 }
 
+export function AlertIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} {...line}>
+      <path d="M8 3.5v5.2M8 12v.1" />
+    </svg>
+  )
+}
+
 export function CookieIcon(props: IconProps) {
   return (
     <svg {...base(props)} {...line}>
