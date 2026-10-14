@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react'
 import { DownloadIcon } from '@/components/Icons'
+import ExportLink from '@/components/exports/ExportLink'
 import ProgressBar from '@/components/exports/ProgressBar'
 import StateBadge from '@/components/exports/StateBadge'
 import { useExports } from '@/components/exports/ExportProvider'
@@ -57,6 +58,7 @@ export default function Index() {
                 </div>
                 {job.state === 'ready' && <div className="mt-0.5 text-[13px] text-muted">{formatDownloads(job.download_count, job.last_downloaded_at)}</div>}
                 {job.error && <div className="mt-1.5 text-[13px] font-medium text-danger">{job.error}</div>}
+                <ExportLink job={job} />
               </div>
               <div>
                 <StateBadge state={job.state} label={job.state_label} />

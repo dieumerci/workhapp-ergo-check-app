@@ -15,6 +15,18 @@ export function formatRequested(isoTimestamp: string, now = Date.now()): string 
   return formatDate(isoTimestamp.slice(0, 10))
 }
 
+// 86_461 -> "24h 01m 01s", 2_467 -> "41m 07s", 7 -> "7s". The seconds always show, so it visibly counts down.
+export function formatCountdown(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds))
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const two = (value: number) => String(value).padStart(2, '0')
+  if (h > 0) return `${h}h ${two(m)}m ${two(s)}s`
+  if (m > 0) return `${m}m ${two(s)}s`
+  return `${s}s`
+}
+
 // "Sep 1, 2026 – Sep 30, 2026", "Start – Today" or "All dates".
 export function formatRange(from: string, to: string): string {
   if (!from && !to) return 'All dates'

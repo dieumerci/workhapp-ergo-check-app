@@ -123,6 +123,23 @@ export function CheckIcon(props: IconProps) {
   )
 }
 
+export function LinkIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} {...line}>
+      <path d="M6.6 9.4a3 3 0 0 0 4.2 0l2.2-2.2a3 3 0 0 0-4.2-4.2l-.7.7M9.4 6.6a3 3 0 0 0-4.2 0L3 8.8A3 3 0 0 0 7.2 13l.7-.7" />
+    </svg>
+  )
+}
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} {...line}>
+      <circle cx="8" cy="8" r="5.6" />
+      <path d="M8 4.9V8l2.1 1.3" />
+    </svg>
+  )
+}
+
 export function AlertIcon(props: IconProps) {
   return (
     <svg {...base(props)} {...line}>
