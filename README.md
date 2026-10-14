@@ -152,6 +152,13 @@ bin/rails perf:seed ROWS=100000      # one big tenant plus other tenants (3x as 
 bin/rails perf:benchmark             # legacy-style page vs the current one, with and without the indexes
 bin/rails perf:explain               # EXPLAIN ANALYZE of the SQL the page really runs
 bin/rails perf:clean                 # remove the benchmark data
+SIZES=5000 bin/rails perf:report     # seed and benchmark one size in about 3 seconds
+```
+
+Large sizes are slow because the *old* page is slow: replaying it makes one query per row, which is minutes at 400,000 rows. To measure only the current page at a big size, leave that out:
+
+```bash
+SIZES=700000 LEGACY=skip INDEXES=shipped bin/rails perf:report   # about a minute; progress prints to stderr
 ```
 
 My own run is committed in [`benchmarks/`](benchmarks/dashboard-2026-10-10.txt) and summarised in `SOLUTION.md`.

@@ -5,6 +5,19 @@
 #   bin/rails perf:report               # several sizes in a row (SIZES=5000,25000,100000)
 #   bin/rails perf:clean                # remove the benchmark tenant
 #
+# Big sizes are slow, and the dashboard is not why. Seeding is quick (about 50,000 rows a second,
+# although it writes 4x the size you type: the tenant plus 3x as many rows for 20 others). The
+# cost is the "before" replay, which makes one query per row and holds every row in memory
+# (about 0.3 s per 1,000 rows, so minutes and gigabytes at 400,000), and, by default, building
+# and vacuuming three index sets. Two switches leave those out:
+#
+#   LEGACY=skip       do not replay the inherited page (the "after" numbers are what scale)
+#   INDEXES=shipped   measure only the shipped index set, not three index sets
+#
+#   SIZES=700000 LEGACY=skip INDEXES=shipped bin/rails perf:report
+#
+# Progress is printed to stderr, so stdout stays the table that is saved to benchmarks/.
+#
 # "Before" replays what the inherited page did: load every assessment of the
 # company with every column (raw answers included), look the employee up one
 # row at a time, score each row in Ruby, count statuses in Ruby, render it all.
@@ -32,6 +45,18 @@ module Perf
 
   def company
     Company.find_by(name: COMPANY_NAME)
+  end
+
+  def log(message)
+    warn "[perf #{Time.now.strftime("%H:%M:%S")}] #{message}"
+  end
+
+  def legacy?
+    ENV["LEGACY"].to_s.downcase != "skip"
+  end
+
+  def shipped_indexes_only?
+    ENV["INDEXES"].to_s.downcase == "shipped"
   end
 
   # One big tenant of +rows+ assessments, plus 3x as many spread over other
@@ -148,9 +173,16 @@ module Perf
 
   def benchmark(company, legacy_runs: 1)
     results = {}
-    results[:before_default] = measure(runs: legacy_runs) { legacy_page(company) }
-    results[:before_completed] = measure(runs: legacy_runs) { legacy_page(company, status: "completed") }
-    INDEX_SETS.each do |set, names|
+    if legacy?
+      log("replaying the inherited page: one query per row, about 0.3 s per 1,000 rows (LEGACY=skip leaves it out)")
+      results[:before_default] = measure(runs: legacy_runs) { legacy_page(company) }
+      results[:before_completed] = measure(runs: legacy_runs) { legacy_page(company, status: "completed") }
+    else
+      log("LEGACY=skip: not replaying the inherited page")
+    end
+    sets = shipped_indexes_only? ? INDEX_SETS.slice(:both) : INDEX_SETS
+    sets.each do |set, names|
+      log("measuring the current page, index set: #{set}")
       with_indexes(names) do
         results[:"#{set}_default"] = measure(runs: 5) { current_page(company) }
         results[:"#{set}_completed"] = measure(runs: 5) { current_page(company, status: "completed") }
@@ -165,11 +197,15 @@ module Perf
     format = "%-40s %10s %9s %12s"
     puts format(format, "scenario (#{rows} rows)", "time ms", "queries", "objects")
     puts "-" * 74
-    puts format(format, "before: default view", results[:before_default][:ms], results[:before_default][:queries], results[:before_default][:objects])
-    puts format(format, "before: status=completed", results[:before_completed][:ms], results[:before_completed][:queries], results[:before_completed][:objects])
+    if results[:before_default]
+      puts format(format, "before: default view", results[:before_default][:ms], results[:before_default][:queries], results[:before_default][:objects])
+      puts format(format, "before: status=completed", results[:before_completed][:ms], results[:before_completed][:queries], results[:before_completed][:objects])
+    else
+      puts "before: not measured (LEGACY=skip)"
+    end
     { none: "after, no new index", ordering: "after, ordering index only", both: "after, both indexes (shipped)" }.each do |set, label|
       { default: "default view", completed: "status=completed", recent: "last 90 days" }.each do |scenario, name|
-        result = results.fetch(:"#{set}_#{scenario}")
+        result = results[:"#{set}_#{scenario}"] or next
         puts format(format, "#{label}: #{name}", result[:ms], result[:queries], result[:objects])
       end
     end
@@ -215,7 +251,9 @@ namespace :perf do
   task report: :environment do
     Perf.guard!
     ENV.fetch("SIZES", "5000,25000,100000").split(",").map(&:to_i).each do |rows|
-      Perf.seed(rows)
+      Perf.log("#{rows}: seeding #{rows} rows for the tenant and #{rows * 3} for 20 others")
+      elapsed = Benchmark.realtime { Perf.seed(rows) }
+      Perf.log("#{rows}: seeded in #{elapsed.round(1)}s")
       Perf.print_results(rows, Perf.benchmark(Perf.company))
       puts
     end
