@@ -126,6 +126,8 @@ ANTHROPIC_API_KEY=sk-ant-...   bin/dev     # or OPENAI_API_KEY=sk-...   (ASSISTA
 ASSISTANT_PROVIDER=rules       bin/dev     # no key: a few plain rules, no AI, nothing leaves the server
 ```
 
+To run locally with the same variables you set on the hosting platform, put them in a git-ignored `.env` file at the project root (`.env.example` lists them all): `bin/dev` loads it, so the assistant behaves the same locally as when deployed. Restart `bin/dev` after changing it. Never commit a key.
+
 It is deliberately narrow, because the data is health data: the model is sent only your question, today's date, the allowed values and your department
 names (never an employee name, e-mail, answer, score or assessment); it can only set filters or propose an export, and everything it returns is validated;
 it cannot read data, write data or create an export; the question is filtered from the logs. The provider calls are tested against a stand-in for the
