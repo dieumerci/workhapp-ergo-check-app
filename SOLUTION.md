@@ -80,7 +80,7 @@ client to forge. That is why the multi-tenant tests are short: they send a rival
 and the mutation checks (swap `Current.company.assessment_exports.find` for `AssessmentExport.find`, or build the export
 scope from `Assessment.all`) make those tests fail, which is the proof they are not vacuous.
 
-Looking up another company's record is a **404**, not a 403: the response does not confirm the record exists.
+Looking up another company's record is a **404**, not a 403: the response does not confirm the record exists. The 404 is a designed page (`public/404.html`, served identically in development and production), and the reason goes to the log with ids only, never to the response.
 
 ## 4. Task 1 — company-scoped CSV export
 
@@ -149,6 +149,7 @@ The data is health-related, and "extra care" includes being able to answer an au
 
 - **Small and safe.** Two columns on `assessment_exports` (a small new table, not the large assessments table); a constant default is a metadata-only change in PostgreSQL 11 and later.
 - **Counted only after authorisation.** The download action counts a use once the request is tenant-checked and the file is downloadable, with a single atomic `UPDATE … SET download_count = download_count + 1` (two simultaneous clicks are both counted) that leaves `updated_at` alone, because that column is the build heartbeat. Refused downloads (not ready, expired, another company) are not counted; tests assert it.
+- **A link of its own on every row, and a countdown.** Each export row shows its own address (`/exports/<id>/download`) with a Copy button, whatever the export's state, and, once the file is ready, a live countdown (*"Expires in 23h 41m 07s"*) to when the link stops working. The countdown starts from the server's figure (`expires_in`, a duration, so a wrong clock on the admin's computer cannot shift it) and counts on the browser's own timer; at zero the list reloads and the row shows *Expired* with Retry. The link is only ever an *address*: it carries no secret and no company, because the company still comes from the session. An admin of the owning company (Maya or her colleague Daniel) opens it and is sent to the one-minute signed file; an admin of any other company, even holding this exact link, gets a **404** (a designed page, the same one an id that never existed gets), and that refused request is not counted. Five new tests and three mutation checks pin it (two on the countdown, three on the link and the 404): drop the link from the payload, drop the company scope, or break the countdown, and tests fail.
 - **Trade-off.** It records *that* a link was used, not *who* used it: the link is authorised per request, so any admin of the company could click it. A per-download audit row (admin, time, IP) is the next step if a regulator needs it.
 
 ## 5. Task 2 — dashboard speed and the score
@@ -458,7 +459,7 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 350 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, search, the assistant's validation and its provider adapters, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 355 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, search, the assistant's validation and its provider adapters, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser at 375, 390, 768, 1024 and 1440 px with no horizontal overflow, the search and the assistant (offline mode) driven end to end; text contrast computed for every colour pair (5.5 to 16.6 on the canvas); production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
@@ -513,7 +514,7 @@ The brief asks for restraint, and the three tasks are small. The interface is wh
 | **Motion** | 150 to 300 ms, one easing, nothing that shifts layout, switched off under `prefers-reduced-motion`. |
 | **Touch and keyboard** | 44 px targets on touch screens, visible focus rings, a full keyboard path, `/` or Cmd/Ctrl+K to search, Escape to close. |
 
-**Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 350 tests, the production build with no warnings, and a manual pass at five widths.
+**Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 355 tests, the production build with no warnings, and a manual pass at five widths.
 
 **What this does not include:** dark mode, internationalisation, and automated front-end tests (see §9 and §16).
 

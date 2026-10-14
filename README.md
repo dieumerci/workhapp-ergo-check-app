@@ -11,7 +11,7 @@ old Rails app, without rewrites:
 | **3. Status normalization** | New and updated records only ever hold `pending`, `in_progress`, `completed`, `needs_follow_up` or `archived`. The historical backfill is **designed, tested and guarded, but not executed**. |
 
 Enhancements that follow from those tasks:
-- an **export audit trail** (who requested each export, how often it was downloaded);
+- an **export audit trail** (who requested each export, how often it was downloaded), with **a link of its own on every export and a live countdown to when it expires**; the link opens only for admins of the owning company, and anyone else gets a designed 404;
 - a **legacy-data note** (how much of the history still uses old status spellings, shown instead of hidden);
 - **search** (by employee, department or assessment code), company-scoped, never logged, never part of an export;
 - a **redesigned interface** (floating navigation, a design system in tokens, mobile-first sheets, a snow-white canvas);
@@ -66,7 +66,7 @@ The [demo script](#demo-script-510-minutes) below is a ready-made tour.
 | Change status | From the drawer. Aliases such as `comp` are normalized, unknown values are rejected, and the counts and score update immediately |
 | **New assessment** | Pick one of your employees or add one, choose a status, optionally enter the four section scores. Saved to your company only |
 | CSV export | Live match count, background build with real progress, ready / failed / expired states, retry, one-minute signed download. Six columns, no personal data |
-| Exports page | History of the company's exports and their state, who requested each one, and how often it was downloaded |
+| Exports page | History of the company's exports and their state, who requested each one, how often it was downloaded, and on every row the export's own link (Copy) with a live countdown to when it expires. Another company opening that link gets a 404 |
 | Search | Find assessments by part of an employee's name, a department or an `A-` code; several words at once; `/` or Cmd/Ctrl+K to focus it. Counts, pager and the legacy note follow the search; it is never logged, never remembered and never part of an export |
 | Ask in plain English | Optional (see "The assistant" below): a sentence becomes filters, or an export you review and confirm. Hidden unless configured |
 | Legacy-data note | Under the filters: "42 of 64 use a standard status" with a progress bar, which older spellings were found and how they are shown. Hidden when the data is clean |
@@ -138,7 +138,7 @@ network; the **Anthropic** call was also tried by hand against the live API (two
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 350 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 355 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -388,7 +388,7 @@ An export is a CSV written through Active Storage. A Railway container's disk is
 3. **Assistant (30 s, optional).** With `ASSISTANT_PROVIDER=rules` (or a key), ask "needs follow-up in Finance, last 30 days": the filters apply, **Undo** reverts them. Ask "export September": nothing is created until you press *Request export*.
 4. **New assessment (1 min).** Press *New assessment*, add an employee, choose *Completed*, enter four scores, create it, and see the score the dashboard computes.
 5. **Export (3 min).** Export CSV from a filtered view: locked company, live match count, six columns, "Left out".
-   Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry), who requested each export and how often it was downloaded.
+   Request it, watch progress, download, and open the file (no names, no e-mail). Show the Exports page: ready, failed (Retry), who requested each export, how often it was downloaded, and each row's link with its countdown. Copy a link, sign in as an admin of the *other* company, open it: a 404.
 6. **Performance (1–2 min).** `bin/rails perf:benchmark` output, and the EXPLAIN difference between the design's index and the one shipped.
 7. **Status plan (2 min).** Release plan page: type `comp`, `n/a`, `xyz` in the tester; walk the eight steps and which are live vs window;
    `bin/rails status:backfill:report`.
