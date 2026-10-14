@@ -138,7 +138,7 @@ network; the **Anthropic** call was also tried by hand against the live API (two
 All of these are expected to be clean:
 
 ```bash
-bin/rails test           # 352 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
+bin/rails test           # 350 tests: tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, logs, new assessment, rate limits, production config
 bin/rubocop              # style
 bin/brakeman             # static security analysis
 bin/bundler-audit        # Ruby dependency advisories
@@ -205,7 +205,7 @@ The write tasks refuse to run without `CONFIRM=yes`, without the prerequisite co
 
 - **Inertia, not a separate SPA and API.** One repository, one deploy, one set of auth and CSRF rules. Controllers return page props; React renders them. TypeScript stays small and sits where it adds value (the dashboard, the dialogs, the export UI).
 - **The tenant comes from the session, never from the request.** `Current.company` is derived from the signed-in admin, and every query goes through `Current.company.<association>`. A
-  `company_id` parameter is simply not read anywhere. Another company's record is a 404, not a 403, so it does not even confirm that it exists. The one deliberate exception is a *download link*: using another company's export link answers exactly like an expired one (the same redirect and message, and the same for an id that never existed), so a link passed to the wrong person simply "expires".
+  `company_id` parameter is simply not read anywhere. Another company's record is a 404, not a 403, so it does not even confirm that it exists.
 - **Plain Ruby objects for the domain.** `Status`, `ScoreCalculator`, `AssessmentDashboard`, `AssessmentRow`, `NewAssessment` and the export builder are small, individually tested classes. Controllers only translate HTTP to and from them.
 - **Background export, not streaming.** A large export can outlast a web request, and a dyno restart should not lose it. A queued row plus a job gives progress, retry and a stored file; the reasoning is in [`SOLUTION.md` §4.1](SOLUTION.md#41-async-not-streaming--and-why).
 - **Redaction by construction.** The export reads six columns through a dedicated select. Names, e-mails and free text are never loaded, so they cannot leak by a missed filter.

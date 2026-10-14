@@ -54,7 +54,7 @@ A legacy app is not a blank page. It earns money, it holds data nobody fully und
 
 | Brief says | Where | Verified by |
 |---|---|---|
-| Export only for the admin's own company | `ExportsController` takes the company from `Current.company` for every lookup | `exports_test`: another company's download link answers as an expired one (same answer as a missing id), retry → 404; `company_id` params ignored; mutation checks |
+| Export only for the admin's own company | `ExportsController` takes the company from `Current.company` for every lookup | `exports_test`: cross-tenant download/retry → 404; `company_id` params ignored; mutation check |
 | Do not rely on a client-provided company id | No code reads `params[:company_id]` anywhere | `AssessmentsDashboardTest`, `ExportsTest` send a rival `company_id` and assert nothing changes |
 | Filters limited to exactly two | `ExportsController#build_export` reads `from`, `to`, `status` only | `exports_test`: extra params (`department`, `employee_email`, `admin_id`…) are ignored |
 | Exclude/redact free text and identifiers | Builder reads six columns via `AssessmentRow`; `employee_ref` is an HMAC | `AssessmentExportsBuilderTest`: no name, e-mail, free text, raw key anywhere in the file |
@@ -77,10 +77,10 @@ A legacy app is not a blank page. It earns money, it holds data nobody fully und
 `Current.company` is derived from the signed-in admin. Every controller, job and query reaches data through
 `Current.company.<association>`. There is no parameter, header or cookie that names a company, so there is nothing for a
 client to forge. That is why the multi-tenant tests are short: they send a rival company id and assert it changes nothing,
-and the mutation checks (swap `Current.company.assessment_exports.find_by` for `AssessmentExport.find_by`, or build the export
+and the mutation checks (swap `Current.company.assessment_exports.find` for `AssessmentExport.find`, or build the export
 scope from `Assessment.all`) make those tests fail, which is the proof they are not vacuous.
 
-Looking up another company's record is a **404**, not a 403: the response does not confirm the record exists. The one exception is the export *download link* (§4.4), which answers like an expired link instead.
+Looking up another company's record is a **404**, not a 403: the response does not confirm the record exists.
 
 ## 4. Task 1 — company-scoped CSV export
 
@@ -136,15 +136,6 @@ Downloading re-checks the tenant, then redirects to a **one-minute signed storag
 Rails and the link is useless a minute later. Exports are valid for 24 hours; a daily job purges expired files so exported data
 does not linger. The Rails log would have written that signed URL in full ("Redirected to …"), which I found by reading the worker
 log in production mode; `filter_redirect` now masks it (tested).
-
-**A link used by the wrong person just expires.** The download action looks the export up *inside the signed-in company* and
-gives one answer to three different situations: an export that really has expired, another company's export, and an id that never
-existed. Each is the same redirect to the Exports page with the same message (*"That download link has expired. Request a new
-export."*), so nothing in the response tells someone else's export from a missing one, which is the property a 404 gives. I chose
-this over a 404 because a download link is the one URL people paste into chats and e-mails: the realistic failure is a link used by
-the wrong person or too late, and "expired, request a new one" is a message they can act on, where a bare 404 looks like a broken
-app. Retry and every other lookup of another company's record are still a 404. Three tests pin this, and two mutation checks (drop
-the company scope; answer a missing id with a 404) make them fail. The alert shows as a warning toast that stays for six seconds.
 
 ### 4.5 Trade-offs
 
@@ -467,7 +458,7 @@ production; the signed download link in the logs; and a CSP violation from Inert
 
 ## 11. How this was verified, and what was not
 
-**Verified:** 352 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, search, the assistant's validation and its provider adapters, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
+**Verified:** 350 automated tests (tenancy, redaction, filters, score, status, backfill, auth, sessions, CAPTCHA, cookies, log contents, rate limits, hardening, new assessment, seeds, S3 signing, the export audit trail, the legacy-data note, search, the assistant's validation and its provider adapters, a real first boot on an empty database); RuboCop, Brakeman (0 warnings, 1 documented false positive), bundler-audit and npm audit clean; TypeScript strict
 with no errors; the Vite production build with no warnings; every screen exercised in a browser at 375, 390, 768, 1024 and 1440 px with no horizontal overflow, the search and the assistant (offline mode) driven end to end; text contrast computed for every colour pair (5.5 to 16.6 on the canvas); production mode booted against a scratch single database (migrations, security headers, cookie flags, CSRF accepted and rejected,
 an export built by a separate worker and downloaded, no PII in the file); mutation checks on the tenant scoping, the log filters, session revocation and the signed-link log protection.
 
@@ -522,7 +513,7 @@ The brief asks for restraint, and the three tasks are small. The interface is wh
 | **Motion** | 150 to 300 ms, one easing, nothing that shifts layout, switched off under `prefers-reduced-motion`. |
 | **Touch and keyboard** | 44 px targets on touch screens, visible focus rings, a full keyboard path, `/` or Cmd/Ctrl+K to search, Escape to close. |
 
-**Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 352 tests, the production build with no warnings, and a manual pass at five widths.
+**Search** (§5.7) is the one new capability on the dashboard; the **legacy-data note** (§5.6) and the **export audit trail** (§4.6) are the others. **No behaviour changed in the redesign:** the same handlers, routes, props and tests. Verified by `tsc`, 350 tests, the production build with no warnings, and a manual pass at five widths.
 
 **What this does not include:** dark mode, internationalisation, and automated front-end tests (see §9 and §16).
 

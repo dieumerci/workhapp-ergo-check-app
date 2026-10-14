@@ -234,37 +234,16 @@ class ExportsTest < ActionDispatch::IntegrationTest
 
   # ---- downloading ------------------------------------------------------
 
-  test "another company's download link just looks expired, and is not counted" do
-    export = ready_export(company: @other_company, admin: @other_admin)
+  test "another company's export cannot be downloaded or retried" do
+    export = AssessmentExport.create!(company: @other_company, admin: @other_admin)
+    export.file.attach(io: StringIO.new("secret\n"), filename: "x.csv", content_type: "text/csv")
+    export.mark_ready!(row_count: 1)
     sign_in_as(@admin)
 
     get download_export_path(export)
-
-    assert_redirected_to exports_path
-    assert_match(/expired/, flash[:alert])
-    assert_equal 0, export.reload.download_count
-  end
-
-  test "someone else's export, an id that never existed and a really expired link all get the same answer" do
-    theirs = ready_export(company: @other_company, admin: @other_admin)
-    expired = ready_export.tap { |export| export.update_columns(expires_at: 1.minute.ago) }
-    sign_in_as(@admin)
-
-    answers = [ theirs.id, AssessmentExport.maximum(:id) + 1000, expired.id ].map do |id|
-      get download_export_path(id)
-      [ response.status, response.location, flash[:alert] ]
-    end
-
-    assert_equal 1, answers.uniq.size, "nothing may tell someone else's export from a missing one: #{answers.inspect}"
-    assert_match(/expired/, answers.first.last)
-  end
-
-  test "another company's export cannot be retried" do
-    export = ready_export(company: @other_company, admin: @other_admin)
-    sign_in_as(@admin)
+    assert_response :not_found
 
     post retry_export_path(export)
-
     assert_response :not_found
   end
 
